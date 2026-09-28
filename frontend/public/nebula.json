@@ -1,0 +1,5 @@
+{
+  "edition": "nebula",
+  "name": "FilaOps (Nebula)",
+  "features": ["i18n-es", "responsive", "unlimited-users", "customer-optional-email", "mobile-app"]
+}

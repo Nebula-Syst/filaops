@@ -437,9 +437,9 @@ export default function AdminLayout() {
             ))}
           </nav>
         </aside>
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           <header
-            className="sticky top-0 z-30 glass px-6 py-4"
+            className="sticky top-0 z-30 glass pl-16 pr-4 md:px-6 py-4"
             style={{ borderBottom: "1px solid var(--border-subtle)" }}
           >
             <div className="flex justify-between items-center">
@@ -451,15 +451,17 @@ export default function AdminLayout() {
                   ERP
                 </h1>
                 <span
-                  className="text-xs font-mono-data"
+                  className="hidden sm:inline text-xs font-mono-data"
                   style={{ color: "var(--text-muted)" }}
                 >
                   v{formatVersion(currentVersion)}
                 </span>
-                <SecurityBadge
-                  aiProvider={aiSettings?.ai_provider}
-                  externalBlocked={aiSettings?.external_ai_blocked}
-                />
+                <span className="hidden sm:inline-flex">
+                  <SecurityBadge
+                    aiProvider={aiSettings?.ai_provider}
+                    externalBlocked={aiSettings?.external_ai_blocked}
+                  />
+                </span>
               </div>
               <div className="flex items-center gap-4">
                 {isPro && isAdmin && (
@@ -494,7 +496,7 @@ export default function AdminLayout() {
                 )}
                 {user && (
                   <span
-                    className="text-sm"
+                    className="hidden sm:inline text-sm"
                     style={{ color: "var(--text-secondary)" }}
                   >
                     <span style={{ color: "var(--text-primary)" }}>
@@ -504,18 +506,19 @@ export default function AdminLayout() {
                 )}
                 <button
                   onClick={handleLogout}
+                  aria-label="Logout"
                   className="flex items-center gap-2 text-sm transition-colors hover:text-red-400"
                   style={{ color: "var(--text-secondary)" }}
                 >
                   <LogoutIcon />
-                  <span>Logout</span>
+                  <span className="hidden sm:inline">Logout</span>
                 </button>
               </div>
             </div>
           </header>
           <main
             id="main-content"
-            className="flex-1 p-6 overflow-auto grid-pattern"
+            className="flex-1 p-3 sm:p-6 overflow-auto grid-pattern"
             tabIndex="-1"
           >
             <Breadcrumbs />
