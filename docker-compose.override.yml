@@ -1,0 +1,10 @@
+services:
+  db:
+    ports: !reset []
+    restart: unless-stopped
+  backend:
+    ports: !reset []
+    restart: unless-stopped
+  frontend:
+    ports: !override ["13003:8080"]
+    restart: unless-stopped
