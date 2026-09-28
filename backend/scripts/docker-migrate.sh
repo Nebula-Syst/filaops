@@ -31,7 +31,7 @@ if echo "$CURRENT_OUTPUT" | grep -q "Can't locate revision"; then
 fi
 
 # Core migrations
-alembic upgrade head
+alembic upgrade heads  # Nebula: 'heads' (el fork añade migraciones propias)
 
 # PRO plugin migrations (if installed by entrypoint)
 if python -c "import filaops_pro" 2>/dev/null; then

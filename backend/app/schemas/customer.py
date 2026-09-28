@@ -6,8 +6,17 @@ For admin management of customers (users with account_type='customer')
 from decimal import Decimal
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, EmailStr, model_validator
+from pydantic import BaseModel, Field, EmailStr, field_validator, model_validator
 from datetime import datetime
+
+
+
+def _blank_email_to_none(value):
+    """Nebula (fork): el email de cliente es opcional; "" se guarda como NULL."""
+    if isinstance(value, str) and not value.strip():
+        return None
+    return value
+
 
 VALID_PAYMENT_TERMS = Literal["cod", "prepay", "net15", "net30", "net60", "card_on_file"]
 NET_TERMS = {"net15", "net30", "net60"}
@@ -19,7 +28,7 @@ NET_TERMS = {"net15", "net30", "net60"}
 
 class CustomerBase(BaseModel):
     """Base customer fields"""
-    email: EmailStr
+    email: Optional[EmailStr] = None  # Nebula: opcional
     first_name: Optional[str] = Field(None, max_length=100)
     last_name: Optional[str] = Field(None, max_length=100)
     company_name: Optional[str] = Field(None, max_length=200)
@@ -55,6 +64,18 @@ class CustomerCreate(CustomerBase):
     credit_limit: Optional[Decimal] = Field(None, ge=0)
     approved_for_terms: Optional[bool] = None
 
+    @field_validator("email", mode="before")
+    @classmethod
+    def blank_email_to_none(cls, value):
+        return _blank_email_to_none(value)
+
+    @model_validator(mode="after")
+    def needs_some_identity(self):
+        # Nebula: sin email hace falta al menos un nombre o una empresa
+        if not (self.email or self.first_name or self.last_name or self.company_name):
+            raise ValueError("Enter a name, company or email for the customer")
+        return self
+
 
 class CustomerUpdate(BaseModel):
     """Update an existing customer"""
@@ -86,6 +107,11 @@ class CustomerUpdate(BaseModel):
     credit_limit: Optional[Decimal] = Field(None, ge=0)
     approved_for_terms: Optional[bool] = None
 
+    @field_validator("email", mode="before")
+    @classmethod
+    def blank_email_to_none(cls, value):
+        return _blank_email_to_none(value)
+
     @model_validator(mode="after")
     def net_terms_require_approval(self):
         if self.payment_terms in NET_TERMS and not self.approved_for_terms:
@@ -99,7 +125,7 @@ class CustomerListResponse(BaseModel):
     """Customer list item (summary)"""
     id: int
     customer_number: Optional[str] = None
-    email: str
+    email: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     company_name: Optional[str] = None
@@ -170,7 +196,7 @@ class CustomerSearchResult(BaseModel):
     """Lightweight customer search result for dropdowns"""
     id: int
     customer_number: Optional[str] = None
-    email: str
+    email: Optional[str] = None
     full_name: Optional[str] = None
     company_name: Optional[str] = None
 

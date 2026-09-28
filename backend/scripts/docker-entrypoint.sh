@@ -82,7 +82,7 @@ else
     # migrate service running docker-migrate.sh) handle their own migrations with
     # full error recovery and PRO plugin migration steps.
     echo "FilaOps: Running database migrations..."
-    python -m alembic upgrade head
+    python -m alembic upgrade heads  # Nebula: 'heads' (el fork añade migraciones propias)
     echo "FilaOps: Migrations complete."
     exec env FILAOPS_PRO_MODULE="$FILAOPS_PRO_MODULE" uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips '*'
 fi

@@ -84,13 +84,12 @@ export default function CustomerModal({ customer, onSave, onClose }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-1">
-                  Email *
+                  Email
                 </label>
                 <input
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
                 />
               </div>

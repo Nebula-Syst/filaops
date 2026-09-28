@@ -321,7 +321,7 @@ def preview_customer_import(db: Session, text: str) -> dict:
     detected_format = _detect_csv_format(headers)
 
     existing_emails = set(
-        e[0].lower() for e in db.query(User.email).all()
+        e[0].lower() for e in db.query(User.email).all() if e[0]  # Nebula: hay clientes sin email
     )
     seen_emails: set[str] = set()
 
@@ -332,7 +332,9 @@ def preview_customer_import(db: Session, text: str) -> dict:
 
         email = mapped_data.get("email", "").lower().strip()
         if not email:
-            row_errors.append("Email is required")
+            # Nebula: el email es opcional si hay nombre o empresa
+            if not any(mapped_data.get(k) for k in ("first_name", "last_name", "company_name")):
+                row_errors.append("Enter a name, company or email for the customer")
         elif "@" not in email:
             row_errors.append("Invalid email format")
         elif email in existing_emails:
@@ -342,7 +344,7 @@ def preview_customer_import(db: Session, text: str) -> dict:
         else:
             seen_emails.add(email)
 
-        mapped_data["email"] = email
+        mapped_data["email"] = email or None
 
         rows.append({
             "row_number": i,
@@ -375,7 +377,7 @@ def import_customers(db: Session, text: str, admin_id: int) -> dict:
     reader = csv.DictReader(io.StringIO(text))
 
     existing_emails = set(
-        e[0].lower() for e in db.query(User.email).all()
+        e[0].lower() for e in db.query(User.email).all() if e[0]  # Nebula: hay clientes sin email
     )
 
     imported = 0
@@ -386,12 +388,18 @@ def import_customers(db: Session, text: str, admin_id: int) -> dict:
         mapped_data = map_row_to_fields(raw_row)
         email = mapped_data.get("email", "").lower().strip()
 
-        if not email or "@" not in email:
+        # Nebula: el email es opcional si hay nombre o empresa
+        if not email and not any(mapped_data.get(k) for k in ("first_name", "last_name", "company_name")):
+            skipped += 1
+            errors.append({"row": i, "reason": "Enter a name, company or email for the customer"})
+            continue
+
+        if email and "@" not in email:
             skipped += 1
             errors.append({"row": i, "reason": "Invalid or missing email"})
             continue
 
-        if email in existing_emails:
+        if email and email in existing_emails:
             skipped += 1
             errors.append({"row": i, "reason": f"Email {email} already exists"})
             continue
@@ -401,7 +409,7 @@ def import_customers(db: Session, text: str, admin_id: int) -> dict:
 
         customer = User(
             customer_number=customer_number,
-            email=email,
+            email=email or None,
             password_hash=hash_password(secrets.token_urlsafe(32)),
             first_name=mapped_data.get("first_name", "") or None,
             last_name=mapped_data.get("last_name", "") or None,
@@ -431,7 +439,8 @@ def import_customers(db: Session, text: str, admin_id: int) -> dict:
             savepoint = db.begin_nested()
             db.add(customer)
             db.flush()
-            existing_emails.add(email)
+            if email:
+                existing_emails.add(email)
             imported += 1
         except Exception as e:
             savepoint.rollback()

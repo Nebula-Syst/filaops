@@ -654,15 +654,15 @@ class TestPreviewCustomerImport:
         assert result["truncated"] is False
 
     def test_missing_email(self, db):
-        csv_text = "email,first_name\n,John\njane@example.com,Jane\n"
+        # Nebula: sin email es válido si hay nombre; sin nada que lo identifique, error
+        csv_text = "email,first_name\n,John\n,\njane@example.com,Jane\n"
         result = customer_service.preview_customer_import(db, csv_text)
 
-        assert result["total_rows"] == 2
-        assert result["error_rows"] >= 1
-        # The row without email should have an error
-        first_row = result["rows"][0]
-        assert first_row["valid"] is False
-        assert any("required" in e.lower() for e in first_row["errors"])
+        assert result["total_rows"] == 3
+        assert result["rows"][0]["valid"] is True
+        second_row = result["rows"][1]
+        assert second_row["valid"] is False
+        assert any("name, company or email" in e.lower() for e in second_row["errors"])
 
     def test_invalid_email(self, db):
         csv_text = "email,first_name\nbademail,John\n"
