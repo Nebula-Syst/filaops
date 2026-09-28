@@ -449,9 +449,11 @@ def create_customer(
     Generates a customer number and random unusable password (portal login
     is a Pro feature; in open source, customers are CRM records only).
     """
-    existing = db.query(User).filter(User.email == data.email).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+    # Nebula: el email es opcional; solo se comprueba si viene
+    if data.email:
+        existing = db.query(User).filter(User.email == data.email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already registered")
 
     customer_number = generate_customer_number(db)
     now = datetime.now(timezone.utc)
@@ -523,7 +525,7 @@ def update_customer(
             raise HTTPException(status_code=400, detail="Email already in use")
 
     # Fields that can be explicitly set to NULL via PATCH
-    clearable_fields = {"credit_limit", "approved_for_terms"}
+    clearable_fields = {"credit_limit", "approved_for_terms", "email"}  # Nebula: email borrable
     # Audit fields managed by server logic, never set directly from client
     audit_fields = {"approved_for_terms_at", "approved_for_terms_by"}
 

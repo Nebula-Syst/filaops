@@ -186,8 +186,11 @@ class TestCreateCustomer:
         assert response.status_code == 422
 
     def test_create_customer_missing_email(self, client):
-        """Missing required email returns 422."""
+        """Nebula: el email es opcional si hay nombre; sin nada que lo identifique, 422."""
         response = client.post(BASE_URL, json={"first_name": "No Email"})
+        assert response.status_code == 201
+        assert response.json()["email"] is None
+        response = client.post(BASE_URL, json={"phone": "555-0000"})
         assert response.status_code == 422
 
     def test_create_customer_email_verified_is_false(self, client):
@@ -973,8 +976,8 @@ class TestImportPreview:
         assert data["rows"][0]["data"]["email"] == f"preview-{uid}@example.com"
 
     def test_preview_missing_email(self, client):
-        """Preview flags rows with missing email as errors."""
-        csv_content = "email,first_name\n,John\n"
+        """Nebula: solo es error si la fila no tiene ni email ni nombre ni empresa."""
+        csv_content = "email,first_name\n,\n"
         response = client.post(
             f"{BASE_URL}/import/preview",
             files={"file": ("customers.csv", io.BytesIO(csv_content.encode()), "text/csv")},
@@ -983,7 +986,7 @@ class TestImportPreview:
         data = response.json()
         assert data["error_rows"] == 1
         assert data["rows"][0]["valid"] is False
-        assert any("required" in e.lower() for e in data["rows"][0]["errors"])
+        assert any("name, company or email" in e.lower() for e in data["rows"][0]["errors"])
 
     def test_preview_invalid_email(self, client):
         """Preview flags rows with invalid email format."""
@@ -1117,7 +1120,7 @@ class TestImportCustomers:
         assert data["skipped"] == 1
 
     def test_import_skips_invalid_emails(self, client):
-        """Import skips rows with missing or invalid email."""
+        """Nebula: importa filas sin email (con nombre) y salta los emails inválidos."""
         uid = uuid.uuid4().hex[:8]
         csv_content = (
             "email,first_name\n"
@@ -1131,8 +1134,8 @@ class TestImportCustomers:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["imported"] == 1
-        assert data["skipped"] == 2
+        assert data["imported"] == 2
+        assert data["skipped"] == 1
 
     def test_import_non_csv_file(self, client):
         """Non-CSV file returns 400."""
@@ -1144,7 +1147,7 @@ class TestImportCustomers:
 
     def test_import_returns_error_details(self, client):
         """Import response includes error details for skipped rows."""
-        csv_content = "email,first_name\n,Missing\n"
+        csv_content = "email,first_name\n,\n"
         response = client.post(
             f"{BASE_URL}/import",
             files={"file": ("customers.csv", io.BytesIO(csv_content.encode()), "text/csv")},

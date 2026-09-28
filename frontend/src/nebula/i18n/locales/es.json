@@ -1094,6 +1094,8 @@
   "English (United States)": "Inglés (Estados Unidos)",
   "Ensure your catalog has MaterialColor entries for variable material types.": "Asegúrate de que tu catálogo tenga entradas MaterialColor para los tipos de material variables.",
   "Enter": "Intro",
+  "Enter a name or email to save as new customer": "Indica un nombre o email para guardarlo como cliente nuevo",
+  "Enter a name, company or email for the customer": "Indica un nombre, empresa o email para el cliente",
   "Enter a printer's IP address to detect it. Works with BambuLab, Klipper, and OctoPrint.": "Introduce la IP de una impresora para detectarla. Funciona con BambuLab, Klipper y OctoPrint.",
   "Enter actual quantity produced (can exceed ordered qty for MTS overruns)": "Introduce la cantidad real producida (puede superar la pedida en sobreproducción para stock)",
   "Enter new SKU": "Introduce el SKU nuevo",

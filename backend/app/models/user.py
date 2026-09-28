@@ -24,7 +24,9 @@ class User(Base):
     customer_number = Column(String(20), nullable=True, index=True)  # CUST-001, CUST-002
 
     # Authentication
-    email = Column(String(255), unique=True, nullable=False, index=True)
+    # Nebula (fork): nullable para clientes sin email (migración nebula_001).
+    # El staff sigue necesitando email: es su usuario de inicio de sesión.
+    email = Column(String(255), unique=True, nullable=True, index=True)
     password_hash = Column(String(255), nullable=False)
     email_verified = Column(Boolean, default=False, nullable=False)
 

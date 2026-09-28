@@ -301,8 +301,9 @@ export default function QuoteFormModal({ quote, onSave, onClose }) {
       }
     }
 
-    if (saveAsCustomer && !form.customer_email) {
-      toast.error("Customer email is required to save as new customer");
+    // Nebula: el email es opcional; basta con el nombre
+    if (saveAsCustomer && !form.customer_email && !form.customer_name?.trim()) {
+      toast.error("Enter a name or email to save as new customer");
       return;
     }
 
@@ -310,7 +311,7 @@ export default function QuoteFormModal({ quote, onSave, onClose }) {
 
     // Create customer if needed
     let customerId = form.customer_id;
-    if (saveAsCustomer && !customerId && form.customer_email) {
+    if (saveAsCustomer && !customerId && (form.customer_email || form.customer_name?.trim())) {
       try {
         const nameParts = (form.customer_name || "").trim().split(" ");
         const firstName = nameParts[0] || "";
@@ -321,7 +322,7 @@ export default function QuoteFormModal({ quote, onSave, onClose }) {
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            email: form.customer_email,
+            email: form.customer_email || null,
             first_name: firstName || null,
             last_name: lastName || null,
           }),
@@ -790,7 +791,7 @@ export default function QuoteFormModal({ quote, onSave, onClose }) {
                   </div>
                 </div>
 
-                {!form.customer_id && form.customer_email && (
+                {!form.customer_id && (form.customer_email || form.customer_name?.trim()) && (
                   <div className="mt-3">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
