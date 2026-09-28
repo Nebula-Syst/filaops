@@ -5,6 +5,8 @@ services:
   backend:
     ports: !reset []
     restart: unless-stopped
+    environment:
+      NEBULA_COMMUNITY_SEAT_CAP: unlimited
   frontend:
     ports: !override ["13003:8080"]
     restart: unless-stopped

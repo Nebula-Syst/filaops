@@ -21,6 +21,7 @@ is already over the cap (e.g. a pre-existing multi-user community deployment)
 keeps every current user working; it simply cannot add or reactivate another
 staff member until it upgrades. There is no startup- or login-time enforcement.
 """
+import os
 from typing import Optional
 
 from fastapi import HTTPException
@@ -48,6 +49,15 @@ _SEAT_CAPS: dict[str, Optional[int]] = {
     "professional": None,  # unlimited
     "enterprise": None,    # unlimited
 }
+
+# Nebula (fork): el límite del plan community se puede cambiar por entorno.
+# NEBULA_COMMUNITY_SEAT_CAP=unlimited (o un número). Sin la variable se mantiene
+# el comportamiento de upstream (1 usuario de staff).
+_nebula_cap = os.getenv("NEBULA_COMMUNITY_SEAT_CAP", "").strip().lower()
+if _nebula_cap:
+    _SEAT_CAPS["community"] = (
+        None if _nebula_cap in ("unlimited", "none", "0") else int(_nebula_cap)
+    )
 
 # Shown to the user when they hit the community seat cap.
 SEAT_LIMIT_MESSAGE = (
