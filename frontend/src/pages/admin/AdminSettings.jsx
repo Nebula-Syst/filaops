@@ -11,6 +11,7 @@ import { useLocale } from "../../contexts/LocaleContext";
 import LicenseSection from "../../components/LicenseSection";
 import QualitySettingsSection from "../../components/settings/QualitySettingsSection";
 import { useApp } from "../../contexts/AppContext";
+import LanguageSettings from "../../nebula/i18n/LanguageSettings";
 
 const AdminSettings = () => {
   const api = useApi();
@@ -271,6 +272,8 @@ const AdminSettings = () => {
           Configure your company information, logo, and tax settings
         </p>
       </div>
+
+      <LanguageSettings />
 
       {smtpConfigured === false && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
