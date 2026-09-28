@@ -9,7 +9,9 @@ import Modal from "../../components/Modal";
 // unlimited. Mirrors backend app/core/seat_limits.py (community cap = 1). The
 // backend is the real gate (enforce_seat_cap, PR-D2 #862) — this constant only
 // drives the FE seat banner / Add-User affordance.
-const COMMUNITY_SEAT_CAP = 1;
+// Nebula (fork): sin límite de usuarios (el backend lo quita con
+// NEBULA_COMMUNITY_SEAT_CAP=unlimited). null = sin límite, sin banner.
+const COMMUNITY_SEAT_CAP = null;
 
 // Role options
 const ROLE_OPTIONS = [
@@ -98,7 +100,7 @@ export default function AdminUsers() {
   // unlimited so no banner. The backend still enforces the cap regardless
   // (enforce_seat_cap #862) — this is upsell/awareness only.
   const activeSeats = stats.admins + stats.operators;
-  const atSeatCap = !isPro && activeSeats >= COMMUNITY_SEAT_CAP;
+  const atSeatCap = !isPro && COMMUNITY_SEAT_CAP != null && activeSeats >= COMMUNITY_SEAT_CAP;
 
   const getRoleStyle = (role) => {
     const found = ROLE_OPTIONS.find((r) => r.value === role);
@@ -218,7 +220,7 @@ export default function AdminUsers() {
       </div>
 
       {/* Seat-cap banner — community allows 1 staff seat; PRO is unlimited. */}
-      {!isPro && (
+      {!isPro && COMMUNITY_SEAT_CAP != null && (
         <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
             <svg
