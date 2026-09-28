@@ -1,0 +1,126 @@
+/*
+ * Nebula responsive — ajustes móviles globales, independientes del código de FilaOps.
+ *
+ * Casi todo se aplica solo por debajo de 768px (el breakpoint `md` de Tailwind);
+ * en escritorio solo cambia que las columnas flex-1 pueden encogerse. Los casos que no
+ * se pueden resolver con reglas globales (layouts de dos columnas, cabeceras con
+ * muchos botones) se arreglan en el propio componente con clases `md:`.
+ */
+/* En todos los tamaños: las columnas flex-1 pueden encogerse (si no, una tabla ancha
+   empuja toda la página en vez de desplazarse dentro de su caja) */
+main .flex-1 {
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  /* Tablas: se desplazan en horizontal dentro de su caja, no empujan la página */
+  main div:has(> table),
+  [role="dialog"] div:has(> table),
+  .fixed.inset-0 div:has(> table) {
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+  main table th,
+  main table td {
+    white-space: nowrap;
+  }
+
+  /* Modales: ocupan el ancho útil y hacen scroll vertical si no caben */
+  .fixed.inset-0 {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  .fixed.inset-0 > div[class*="max-w-"],
+  .fixed.inset-0 > div > div[class*="max-w-"],
+  [role="dialog"][class*="max-w-"] {
+    max-width: calc(100vw - 1rem) !important;
+    max-height: calc(100dvh - 1rem);
+    overflow-y: auto;
+  }
+
+  /* Rejillas de formularios/tarjetas sin variante responsive: 3-6 columnas → 2, 2 → 1
+     (las rejillas de calendario de 7 columnas no se tocan) */
+  main .grid.grid-cols-3:not([class*="sm:grid-cols"]):not([class*="md:grid-cols"]),
+  main .grid.grid-cols-4:not([class*="sm:grid-cols"]):not([class*="md:grid-cols"]),
+  main .grid.grid-cols-5:not([class*="sm:grid-cols"]):not([class*="md:grid-cols"]),
+  main .grid.grid-cols-6:not([class*="sm:grid-cols"]):not([class*="md:grid-cols"]),
+  .fixed.inset-0 .grid.grid-cols-3:not([class*="sm:grid-cols"]):not([class*="md:grid-cols"]),
+  .fixed.inset-0 .grid.grid-cols-4:not([class*="sm:grid-cols"]):not([class*="md:grid-cols"]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fixed.inset-0 .grid.grid-cols-2:not([class*="sm:grid-cols"]):not([class*="md:grid-cols"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Los hijos que ocupaban varias columnas no deben forzar columnas extra */
+  main .grid [class*="col-span-3"],
+  main .grid [class*="col-span-4"],
+  .fixed.inset-0 .grid [class*="col-span-2"],
+  .fixed.inset-0 .grid [class*="col-span-3"] {
+    grid-column: 1 / -1;
+  }
+
+  /* Filas de botones/filtros que no caben: que bajen de línea */
+  main .flex.justify-between:not(.flex-wrap):not(.flex-col) {
+    flex-wrap: wrap;
+    row-gap: 0.75rem;
+  }
+  /* Barras de filtros (buscador + selects en una fila): bajan a varias líneas */
+  main .flex:not(.flex-col):has(> select),
+  main .flex:not(.flex-col):has(> .flex-1 input),
+  .fixed.inset-0 .flex:not(.flex-col):has(> select) {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+  main .flex:not(.flex-col):has(> select) > .flex-1,
+  main .flex:not(.flex-col):has(> .flex-1 input) > .flex-1 {
+    flex-basis: 100%;
+  }
+  main .flex:not(.flex-col):has(> select) > select {
+    flex: 1 1 auto;
+    max-width: 100%;
+  }
+
+  /* Filas de varios botones (acciones de cabecera): bajan de línea */
+  main .flex:not(.flex-col):not(table *):has(> button + button):not(:has(> button[class*="border-b-2"])),
+  main .flex:not(.flex-col):not(table *):has(> a + button),
+  main .flex:not(.flex-col):not(table *):has(> button + a) {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+  /* Pestañas (botones con borde inferior): scroll horizontal como en las apps */
+  main .flex:has(> button[class*="border-b-2"]),
+  main nav:has(> button[class*="border-b-2"]) {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+  main .flex:has(> button[class*="border-b-2"]) > button {
+    flex-shrink: 0;
+  }
+
+  /* Campos flex-1 (buscadores, selects junto a una etiqueta) pueden encogerse */
+  main .flex-1,
+  .fixed.inset-0 .flex-1 {
+    min-width: 0;
+  }
+
+  /* Textos largos sin espacios (SKU, emails, URLs) no deben reventar el ancho */
+  main {
+    overflow-wrap: break-word;
+  }
+  main table {
+    overflow-wrap: normal;
+  }
+
+  /* Objetivos táctiles cómodos */
+  main button:not(table *),
+  main select:not(table *),
+  main input:not([type="checkbox"]):not([type="radio"]):not(table *) {
+    min-height: 2.25rem;
+  }
+  /* 16px en inputs evita el zoom automático de iOS al enfocar */
+  input, select, textarea {
+    font-size: max(16px, 1em);
+  }
+}

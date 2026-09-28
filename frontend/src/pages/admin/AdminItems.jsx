@@ -472,7 +472,7 @@ export default function AdminItems() {
   };
 
   return (
-    <div data-testid="items-page" className="flex gap-6 h-full">
+    <div data-testid="items-page" className="flex flex-col md:flex-row gap-6 h-full">
       {/* Left Sidebar - Categories */}
       <CategorySidebar
         categoryTree={categoryTree}

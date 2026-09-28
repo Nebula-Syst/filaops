@@ -16,7 +16,7 @@ export default function CategorySidebar({
   onDeleteCategory,
 }) {
   return (
-    <div className="w-64 flex-shrink-0">
+    <div className="w-full md:w-64 flex-shrink-0">
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-white">Categories</h2>
