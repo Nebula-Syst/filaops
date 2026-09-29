@@ -5,7 +5,7 @@ Tracks shipping lifecycle events for sales orders - label purchase, pickup,
 in transit, delivered, etc. Provides a shipment tracking timeline.
 """
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Date
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 from datetime import datetime, timezone
 
 from app.db.base import Base
@@ -68,7 +68,10 @@ class ShippingEvent(Base):
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
 
     # Relationships
-    sales_order = relationship("SalesOrder", backref="shipping_events")
+    # passive_deletes: al borrar el pedido, la FK (ondelete=CASCADE) borra estas filas
+    # en la BD. Sin esto SQLAlchemy intenta poner sales_order_id a NULL antes de
+    # borrar el pedido y choca con nullable=False (fallaba "Eliminar pedido").
+    sales_order = relationship("SalesOrder", backref=backref("shipping_events", passive_deletes=True))
     user = relationship("User")
 
     def __repr__(self):
