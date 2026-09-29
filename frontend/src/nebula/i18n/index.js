@@ -15,7 +15,19 @@
 import es from "./locales/es.json";
 
 const STORAGE_KEY = "nebula.lang";
-const DICTIONARIES = { es };
+// "en" no traduce nada, pero pasa por la capa para aplicar la marca PrintFlow
+const DICTIONARIES = { es, en: { texts: {}, patterns: [] } };
+
+/**
+ * Marca: PrintFlow es un fork modificado de FilaOps. Los textos del original dicen
+ * "FilaOps"; se muestran como "PrintFlow" salvo cuando hablan de las licencias y
+ * ediciones del proyecto original (FilaOps PRO / Core / Enterprise), que siguen
+ * siendo suyas. El aviso de fork (ForkNotice) va con notranslate.
+ */
+export const BRAND = {
+  name: "PrintFlow",
+  pattern: /\bFilaOps\b(?!\s+(?:PRO|Pro|Core|Enterprise)\b)/g,
+};
 
 export const LANGUAGES = [
   { code: "en", label: "English" },
@@ -66,7 +78,7 @@ function compile(dictionary) {
 const looksLikeEnglishSentence = (v) =>
   /(\S+\s+){5}/.test(v) || /\s(to|the|and|of|for|with|your|is|are|from|on|in)\s/i.test(` ${v} `);
 
-export function createTranslator(dictionary) {
+export function createTranslator(dictionary, { brand = null } = {}) {
   const { texts, patterns } = compile(dictionary);
   const cache = new Map();
 
@@ -95,8 +107,9 @@ export function createTranslator(dictionary) {
     if (cache.has(value)) return cache.get(value);
     const [, lead, body, trail] = value.match(/^(\s*)([\s\S]*?)(\s*)$/);
     const core = body.replace(/\s+/g, " ");
-    const t = translateCore(core);
-    const result = t == null || t === core ? null : lead + t + trail;
+    let t = translateCore(core) ?? core;
+    if (brand) t = t.replace(brand.pattern, brand.name);
+    const result = t === core ? null : lead + t + trail;
     if (cache.size > 20000) cache.clear();
     cache.set(value, result);
     return result;
@@ -113,7 +126,7 @@ function isSkipped(el) {
 }
 
 function start(lang) {
-  const translate = createTranslator(DICTIONARIES[lang]);
+  const translate = createTranslator(DICTIONARIES[lang], { brand: BRAND });
   // Guarda lo último que escribimos en cada nodo para no retraducirlo en bucle
   const written = new WeakMap();
 
@@ -186,4 +199,4 @@ function start(lang) {
 
 const lang = getLanguage();
 document.documentElement.lang = lang;
-if (DICTIONARIES[lang]) start(lang);
+start(DICTIONARIES[lang] ? lang : "en");

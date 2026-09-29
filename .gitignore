@@ -184,3 +184,7 @@ docs/BLIND_TEST_RECOVERY.md
 
 # Documentation assets (screenshots, logos) must be tracked despite *.png above
 !docs/assets/**
+
+# PrintFlow (fork): logos propios, excepción al *.png de arriba
+!branding/*.png
+!frontend/src/nebula/brand/*.png

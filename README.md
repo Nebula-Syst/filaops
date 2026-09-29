@@ -1,3 +1,15 @@
+<!-- PrintFlow: bloque propio del fork; el resto del README es el de FilaOps -->
+<p align="center"><img src="branding/printflow-corto.png" alt="PrintFlow" height="64"></p>
+
+> **PrintFlow es un fork modificado de [FilaOps](https://github.com/BLB3DPrinting/filaops)**,
+> el ERP de código abierto para granjas de impresión 3D de BLB3D Printing, distribuido bajo
+> la [Business Source License 1.1](LICENSE). Añade traducción al español, interfaz para
+> móvil y [app Android](https://github.com/Nebula-Syst/printflow-mobile), usuarios
+> ilimitados, clientes sin email y despliegue automático, y se mantiene al día con las
+> versiones del original. La documentación de abajo es la de FilaOps.
+
+---
+
 # FilaOps
 
 [![CI](https://github.com/BLB3DPrinting/filaops/actions/workflows/filaops-ci.yml/badge.svg)](https://github.com/BLB3DPrinting/filaops/actions/workflows/filaops-ci.yml)

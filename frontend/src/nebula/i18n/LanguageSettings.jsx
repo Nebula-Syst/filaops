@@ -1,8 +1,10 @@
 import { LANGUAGES, getLanguage, setLanguage } from "./index";
+import ForkNotice from "../brand/ForkNotice";
+import logoCorto from "../brand/printflow-corto.png";
 
-// La app móvil (nebula-erp-mobile) añade este marcador al User-Agent
+// La app móvil (printflow-mobile) añade este marcador al User-Agent (NebulaErpApp: nombre antiguo)
 const IN_MOBILE_APP =
-  typeof navigator !== "undefined" && /NebulaErpApp/.test(navigator.userAgent);
+  typeof navigator !== "undefined" && /PrintFlowApp|NebulaErpApp/.test(navigator.userAgent);
 // Origen local de Capacitor en Android: ahí vive la pantalla de servidores de la app
 const APP_SERVER_PICKER_URL = "https://localhost/?select=1";
 
@@ -57,6 +59,10 @@ export default function LanguageSettings() {
             </option>
           ))}
         </select>
+      </div>
+      <div className="bg-gray-800 rounded-lg p-6">
+        <img src={logoCorto} alt="PrintFlow" className="h-8 w-auto mb-4" />
+        <ForkNotice detailed />
       </div>
     </>
   );

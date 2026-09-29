@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { API_URL } from "../../config/api";
-import logoFull from "../../assets/logo_full.png";
-import logoBLB3D from "../../assets/logo_blb3d.svg";
+// PrintFlow (fork de FilaOps): logo propio en src/nebula/brand
+import logoFull from "../../nebula/brand/printflow-entero.png";
+import ForkNotice from "../../nebula/brand/ForkNotice";
 
 /**
  * Sign-in screen, and the app's landing route — "/" redirects here.
@@ -134,24 +135,15 @@ export default function AdminLogin() {
     // Removed when the shell slice migrates this screen off the Neo palette.
     <div data-theme="dim" className="min-h-screen flex items-center justify-center px-4 grid-pattern" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <div className="w-full max-w-md">
-        {/* Dual Logos - BLB3D + FilaOps */}
+        {/* PrintFlow Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <div className="flex flex-col items-center gap-4">
-              {/* BLB3D Logo with breathing glow */}
-              <div className="logo-container">
-                <img
-                  src={logoBLB3D}
-                  alt="BLB3D"
-                  className="h-16 w-auto logo-breathe"
-                />
-              </div>
-              {/* FilaOps Logo */}
               <img
                 src={logoFull}
-                alt="FilaOps"
-                className="w-full max-w-xs mx-auto"
-                style={{ filter: 'drop-shadow(0 0 25px rgba(2, 109, 248, 0.4))' }}
+                alt="PrintFlow"
+                className="w-full max-w-[16rem] mx-auto"
+                style={{ filter: 'drop-shadow(0 0 25px rgba(2, 109, 248, 0.35))' }}
               />
             </div>
           </Link>
@@ -310,6 +302,8 @@ export default function AdminLogin() {
             style={{ color: 'var(--text-secondary)' }}
           ></Link>
         </div>
+
+        <ForkNotice className="mt-6" />
       </div>
     </div>
   );
