@@ -5,7 +5,7 @@ Tracks activity history for sales orders - status changes, notes, payments, etc.
 Provides an audit trail and activity timeline for the OrderDetail page.
 """
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 from datetime import datetime, timezone
 
 from app.db.base import Base
@@ -57,7 +57,10 @@ class OrderEvent(Base):
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
 
     # Relationships
-    sales_order = relationship("SalesOrder", backref="events")
+    # passive_deletes: al borrar el pedido, la FK (ondelete=CASCADE) borra estas filas
+    # en la BD. Sin esto SQLAlchemy intenta poner sales_order_id a NULL antes de
+    # borrar el pedido y choca con nullable=False (fallaba "Eliminar pedido").
+    sales_order = relationship("SalesOrder", backref=backref("events", passive_deletes=True))
     user = relationship("User")
 
     def __repr__(self):
