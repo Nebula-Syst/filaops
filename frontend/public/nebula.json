@@ -1,5 +1,17 @@
 {
-  "edition": "nebula",
-  "name": "FilaOps (Nebula)",
-  "features": ["i18n-es", "responsive", "unlimited-users", "customer-optional-email", "mobile-app"]
+  "edition": "printflow",
+  "name": "PrintFlow",
+  "basedOn": {
+    "name": "FilaOps",
+    "url": "https://github.com/BLB3DPrinting/filaops",
+    "license": "BSL-1.1"
+  },
+  "source": "https://github.com/Nebula-Syst/filaops",
+  "features": [
+    "i18n-es",
+    "responsive",
+    "unlimited-users",
+    "customer-optional-email",
+    "mobile-app"
+  ]
 }

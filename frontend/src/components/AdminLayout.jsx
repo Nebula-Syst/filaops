@@ -11,8 +11,9 @@ import {
 } from "../utils/version";
 import { API_URL } from "../config/api";
 import { useFeatureFlags } from "../hooks/useFeatureFlags";
-import logoNavbar from "../assets/logo_navbar.png";
-import logoBLB3D from "../assets/logo_blb3d.svg";
+// PrintFlow (fork de FilaOps): logos propios en src/nebula/brand
+import logoNavbar from "../nebula/brand/printflow-corto.png";
+import logoMark from "../nebula/brand/printflow-chico.png";
 import { LogoutIcon, MenuIcon } from "./nav/navIcons";
 import { navGroups } from "./nav/navConfig";
 
@@ -224,7 +225,7 @@ export default function AdminLayout() {
         {/* Mobile menu button */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg text-white transition-all"
+          className={`md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg text-white transition-all ${mobileMenuOpen ? "hidden" : ""}`}
           style={{ backgroundColor: "var(--bg-card)" }}
           aria-label="Open navigation menu"
         >
@@ -250,14 +251,16 @@ export default function AdminLayout() {
                 style={{ borderBottom: "1px solid var(--border-subtle)" }}
               >
                 <Link to="/admin" className="flex items-center gap-3">
-                  <div className="logo-container">
-                    <img
-                      src={companyLogoUrl || logoBLB3D}
-                      alt="Company Logo"
-                      className="h-10 w-auto logo-glow"
-                    />
-                  </div>
-                  <img src={logoNavbar} alt="FilaOps" className="h-32" />
+                  {companyLogoUrl && (
+                    <div className="logo-container">
+                      <img
+                        src={companyLogoUrl}
+                        alt="Company Logo"
+                        className="h-10 w-auto logo-glow"
+                      />
+                    </div>
+                  )}
+                  <img src={logoNavbar} alt="PrintFlow" className="h-8 w-auto" />
                 </Link>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
@@ -349,15 +352,17 @@ export default function AdminLayout() {
               to="/admin"
               className={`flex items-center ${sidebarOpen ? "gap-3" : "justify-center w-full"}`}
             >
-              <div className="logo-container">
-                <img
-                  src={companyLogoUrl || logoBLB3D}
-                  alt="Company Logo"
-                  className="h-10 w-auto logo-glow"
-                />
-              </div>
+              {(companyLogoUrl || !sidebarOpen) && (
+                <div className="logo-container">
+                  <img
+                    src={companyLogoUrl || logoMark}
+                    alt={companyLogoUrl ? "Company Logo" : "PrintFlow"}
+                    className="h-10 w-auto logo-glow"
+                  />
+                </div>
+              )}
               {sidebarOpen && (
-                <img src={logoNavbar} alt="FilaOps" className="h-32" />
+                <img src={logoNavbar} alt="PrintFlow" className="h-8 w-auto" />
               )}
             </Link>
             {sidebarOpen && (

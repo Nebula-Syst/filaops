@@ -43,3 +43,29 @@ describe("Nebula i18n translator", () => {
     expect(Object.keys(es.texts).length).toBeGreaterThan(3000);
   });
 });
+
+describe("Marca PrintFlow", () => {
+  const brand = { name: "PrintFlow", pattern: /\bFilaOps\b(?!\s+(?:PRO|Pro|Core|Enterprise)\b)/g };
+  const en = createTranslator({ texts: {}, patterns: [] }, { brand });
+  const esT = createTranslator(
+    { texts: { "Welcome to FilaOps!": "¡Bienvenido a FilaOps!" }, patterns: [["Access {0}", "Acceder a {0}"]] },
+    { brand },
+  );
+
+  it("cambia FilaOps por PrintFlow en inglés y después de traducir", () => {
+    expect(en("Sign in to access FilaOps ERP")).toBe("Sign in to access PrintFlow ERP");
+    expect(esT("Welcome to FilaOps!")).toBe("¡Bienvenido a PrintFlow!");
+    expect(esT("Access FilaOps")).toBe("Acceder a PrintFlow");
+  });
+
+  it("respeta las licencias/ediciones del original", () => {
+    expect(en("Upgrade to FilaOps PRO for more.")).toBeNull();
+    expect(en("FilaOps Core")).toBeNull();
+    expect(en("FilaOps Enterprise integrates with Bambu Cloud")).toBeNull();
+  });
+
+  it("no toca textos sin la marca ni dominios en minúsculas", () => {
+    expect(en("Save")).toBeNull();
+    expect(en("e.g., filaops.local or mycompany.com")).toBeNull();
+  });
+});
