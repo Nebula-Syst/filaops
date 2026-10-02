@@ -9,6 +9,7 @@
  */
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import InvoiceLanguageSelect from "../../nebula/InvoiceLanguageSelect";
 import { useApi } from "../../hooks/useApi";
 import { useToast } from "../../components/Toast";
 import { API_URL } from "../../config/api";
@@ -916,7 +917,8 @@ export default function OrderDetail() {
                   </span>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <InvoiceLanguageSelect invoice={orderInvoice} onChange={setOrderInvoice} />
                 <button
                   onClick={() => navigate(`/admin/invoices?invoice=${orderInvoice.id}`)}
                   className="rounded-lg bg-[var(--paper-sunk)] text-[var(--ink-2)] border border-[var(--rule-hair)] px-3 py-2 text-sm hover:bg-[var(--rule-hair)]"

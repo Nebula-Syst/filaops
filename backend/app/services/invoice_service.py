@@ -525,7 +525,7 @@ def void_invoice(
 # PDF Generation
 # ============================================================================
 
-def generate_invoice_pdf(db: Session, invoice_id: int) -> io.BytesIO:
+def generate_invoice_pdf(db: Session, invoice_id: int, language: Optional[str] = None) -> io.BytesIO:
     """Generate a professional B2B invoice PDF using ReportLab.
 
     Layout mirrors generate_quote_pdf(): branded header, HR separator,
@@ -553,6 +553,11 @@ def generate_invoice_pdf(db: Session, invoice_id: int) -> io.BytesIO:
 
     settings = db.query(CompanySettings).filter(CompanySettings.id == 1).first()
 
+    # PrintFlow: textos en el idioma de la factura (o el de la empresa)
+    from app.services import nebula_invoice_i18n as i18n
+    lang = i18n.resolve_language(language, invoice, settings)
+    L = i18n.LABELS[lang]
+
     # Resolve linked sales order once — used for phone and order number.
     # Note: invoice.customer_id stores order.user_id (a User PK, not Customer PK),
     # so we look up phone from SalesOrder.customer_phone instead.
@@ -575,8 +580,7 @@ def generate_invoice_pdf(db: Session, invoice_id: int) -> io.BytesIO:
     _sym = _CURRENCY_SYMBOLS.get(_currency, f"{_currency}\u00a0")
 
     def _fmt(amount) -> str:
-        value = Decimal(str(amount or "0")).quantize(Decimal("0.01"))
-        return f"{_sym}{value:,.2f}"
+        return i18n.fmt_money(amount, _sym, _currency, lang)
 
     # -- Brand colors (matches quote PDF) --
     BRAND_DARK = colors.HexColor('#0f172a')
@@ -707,21 +711,15 @@ def generate_invoice_pdf(db: Session, invoice_id: int) -> io.BytesIO:
         left_header.extend(company_lines)
 
     right_header = [
-        Paragraph("INVOICE", s_doc_label),
+        Paragraph(L["invoice"], s_doc_label),
         Paragraph(esc(invoice.invoice_number), s_inv_number_right),
         Spacer(1, 6),
-        Paragraph(
-            f"Date: {invoice.created_at.strftime('%B %d, %Y')}" if invoice.created_at else "Date: —",
-            s_detail_right,
-        ),
-        Paragraph(
-            f"Due: {invoice.due_date.strftime('%B %d, %Y')}" if invoice.due_date else "Due: —",
-            s_detail_right,
-        ),
-        Paragraph(f"Terms: {esc(invoice.payment_terms.upper())}", s_detail_right),
+        Paragraph(f"{L['date']}: {i18n.fmt_date(invoice.created_at, lang)}", s_detail_right),
+        Paragraph(f"{L['due']}: {i18n.fmt_date(invoice.due_date, lang)}", s_detail_right),
+        Paragraph(f"{L['terms']}: {esc(i18n.terms_name(invoice.payment_terms, lang))}", s_detail_right),
     ]
     if order_number:
-        right_header.append(Paragraph(f"Order: {esc(order_number)}", s_detail_right))
+        right_header.append(Paragraph(f"{L['order']}: {esc(order_number)}", s_detail_right))
 
     header_table = Table(
         [[left_header, right_header]],
@@ -739,7 +737,7 @@ def generate_invoice_pdf(db: Session, invoice_id: int) -> io.BytesIO:
     # ================================================================
     # BILL TO | (spacer right column — could add Ship To later)
     # ================================================================
-    bill_lines = [Paragraph("BILL TO", s_section)]
+    bill_lines = [Paragraph(L["bill_to"], s_section)]
     if invoice.customer_name:
         bill_lines.append(Paragraph(esc(invoice.customer_name), s_customer_name))
     if invoice.customer_company:
@@ -775,11 +773,11 @@ def generate_invoice_pdf(db: Session, invoice_id: int) -> io.BytesIO:
 
     table_data = [[
         Paragraph('#', th),
-        Paragraph('SKU', th),
-        Paragraph('DESCRIPTION', th),
-        Paragraph('QTY', th_right),
-        Paragraph('UNIT PRICE', th_right),
-        Paragraph('AMOUNT', th_right),
+        Paragraph(L['sku'], th),
+        Paragraph(L['description'], th),
+        Paragraph(L['qty'], th_right),
+        Paragraph(L['unit_price'], th_right),
+        Paragraph(L['amount'], th_right),
     ]]
 
     for i, line in enumerate(lines, 1):
@@ -820,16 +818,16 @@ def generate_invoice_pdf(db: Session, invoice_id: int) -> io.BytesIO:
     # ================================================================
     totals_data = []
     totals_data.append([
-        Paragraph('Subtotal', td_muted_right),
+        Paragraph(L['subtotal'], td_muted_right),
         Paragraph(_fmt(invoice.subtotal), td_right),
     ])
     if invoice.discount_amount and Decimal(str(invoice.discount_amount or "0")) > 0:
         totals_data.append([
-            Paragraph('Discount', td_muted_right),
+            Paragraph(L['discount'], td_muted_right),
             Paragraph(f'−{_fmt(invoice.discount_amount)}', td_muted_right),
         ])
     if invoice.tax_amount and Decimal(str(invoice.tax_amount or "0")) > 0:
-        tax_label = "Sales Tax"
+        tax_label = L["sales_tax"]
         if settings and settings.tax_name:
             tax_label = esc(settings.tax_name)
         if invoice.tax_rate and Decimal(str(invoice.tax_rate or "0")) > 0:
@@ -840,21 +838,21 @@ def generate_invoice_pdf(db: Session, invoice_id: int) -> io.BytesIO:
         ])
     if invoice.shipping_amount and Decimal(str(invoice.shipping_amount or "0")) > 0:
         totals_data.append([
-            Paragraph('Shipping', td_muted_right),
+            Paragraph(L['shipping'], td_muted_right),
             Paragraph(_fmt(invoice.shipping_amount), td_right),
         ])
     totals_data.append([
-        Paragraph('Total Due', s_total_label),
+        Paragraph(L['total_due'], s_total_label),
         Paragraph(_fmt(invoice.total), s_total_value),
     ])
     if invoice.amount_paid and Decimal(str(invoice.amount_paid or "0")) > 0:
         balance = Decimal(str(invoice.total or "0")) - Decimal(str(invoice.amount_paid or "0"))
         totals_data.append([
-            Paragraph('Amount Paid', td_muted_right),
+            Paragraph(L['amount_paid'], td_muted_right),
             Paragraph(_fmt(invoice.amount_paid), td_right),
         ])
         totals_data.append([
-            Paragraph('Balance Due', s_total_label),
+            Paragraph(L['balance_due'], s_total_label),
             Paragraph(_fmt(balance), s_total_value),
         ])
 
@@ -882,44 +880,7 @@ def generate_invoice_pdf(db: Session, invoice_id: int) -> io.BytesIO:
     # ================================================================
     # PAYMENT TERMS — generated verbiage + optional company override
     # ================================================================
-    _TERMS_VERBIAGE = {
-        "cod": (
-            "Payment is due upon delivery. Please ensure payment is prepared "
-            "and ready at the time your order arrives."
-        ),
-        "prepaid": (
-            "Payment is due prior to shipment. Production will begin upon "
-            "confirmation of payment."
-        ),
-        "net_15": (
-            f"Payment is due within 15 days of the invoice date. "
-            f"Please remit payment by "
-            f"{invoice.due_date.strftime('%B %d, %Y') if invoice.due_date else 'the due date shown above'}."
-        ),
-        "net_30": (
-            f"Payment is due within 30 days of the invoice date. "
-            f"Please remit payment by "
-            f"{invoice.due_date.strftime('%B %d, %Y') if invoice.due_date else 'the due date shown above'}."
-        ),
-        "net_60": (
-            f"Payment is due within 60 days of the invoice date. "
-            f"Please remit payment by "
-            f"{invoice.due_date.strftime('%B %d, %Y') if invoice.due_date else 'the due date shown above'}."
-        ),
-    }
-    # Aliases map legacy codes used by _calculate_due_date() to canonical keys
-    _TERMS_ALIASES = {
-        "prepay": "prepaid",
-        "net15": "net_15",
-        "net30": "net_30",
-        "net60": "net_60",
-    }
-    terms_key = (invoice.payment_terms or "").strip().lower().replace(" ", "_").replace("-", "_")
-    terms_key = _TERMS_ALIASES.get(terms_key, terms_key)
-    terms_verbiage = _TERMS_VERBIAGE.get(terms_key)
-    if not terms_verbiage:
-        due_str = invoice.due_date.strftime('%B %d, %Y') if invoice.due_date else "the due date shown above"
-        terms_verbiage = f"Payment is due by {due_str}."
+    terms_verbiage = i18n.terms_verbiage(invoice.payment_terms, invoice.due_date, lang)
 
     # Append company invoice_terms — raw (no pre-escape), esc() runs once at render below
     if settings and settings.invoice_terms:
@@ -928,7 +889,7 @@ def generate_invoice_pdf(db: Session, invoice_id: int) -> io.BytesIO:
     content.append(KeepTogether([
         HRFlowable(width="100%", thickness=0.5, color=BRAND_BORDER),
         Spacer(1, 0.1 * inch),
-        Paragraph("PAYMENT TERMS", s_section),
+        Paragraph(L["payment_terms"], s_section),
         Paragraph(esc(terms_verbiage), s_terms_box),
         Spacer(1, 0.2 * inch),
     ]))
@@ -942,12 +903,8 @@ def generate_invoice_pdf(db: Session, invoice_id: int) -> io.BytesIO:
     if footer_text:
         content.append(Paragraph(esc(footer_text), s_footer_center))
     else:
-        company_name = esc(settings.company_name) if settings and settings.company_name else "us"
-        content.append(Paragraph(
-            f"Thank you for your business with {company_name}. "
-            "Questions? Please contact us and reference your invoice number.",
-            s_footer_center,
-        ))
+        company_name = esc(settings.company_name) if settings and settings.company_name else L["us"]
+        content.append(Paragraph(L["thank_you"].format(company=company_name), s_footer_center))
 
     doc.build(content)
     pdf_buffer.seek(0)
