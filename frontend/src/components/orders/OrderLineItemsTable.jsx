@@ -150,7 +150,7 @@ export default function OrderLineItemsTable({ order, orderId, onOrderUpdated }) 
                               className="text-[var(--ink-3)] hover:text-[var(--ink)] text-xs"
                               title="Cancel"
                             >
-                              \u2717
+                              {"\u2717"}
                             </button>
                           </div>
                         ) : (
