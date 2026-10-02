@@ -214,6 +214,9 @@ class SalesOrderListResponse(SalesOrderBase):
     shipping_zip: Optional[str] = None
     shipping_country: Optional[str] = None
     tracking_number: Optional[str] = None
+    # PrintFlow: la tarjeta de la lista muestra el cliente (antes siempre "No Customer")
+    customer_id: Optional[int] = None
+    customer_name: Optional[str] = None
     # Fulfillment status summary (optional, only when include_fulfillment=true)
     fulfillment: Optional[FulfillmentStatusSummary] = None
 

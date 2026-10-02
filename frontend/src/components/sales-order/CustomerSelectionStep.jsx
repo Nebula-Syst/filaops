@@ -57,11 +57,11 @@ export default function CustomerSelectionStep({
       {selectedCustomer && (
         <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
           <div className="text-white font-medium">
-            {selectedCustomer.name}
+            {selectedCustomer.full_name || selectedCustomer.name || selectedCustomer.company_name}
           </div>
-          {selectedCustomer.company && (
+          {(selectedCustomer.company_name || selectedCustomer.company) && (
             <div className="text-gray-400 text-sm">
-              {selectedCustomer.company}
+              {selectedCustomer.company_name || selectedCustomer.company}
             </div>
           )}
           <div className="text-gray-400 text-sm">

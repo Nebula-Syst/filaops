@@ -580,6 +580,19 @@ def create_sales_order(
     # Use customer_id if provided, otherwise current user
     user_id = customer_id if customer_id else created_by_user_id
 
+    # PrintFlow: guardar el cliente en el pedido (upstream lo validaba pero no lo
+    # guardaba: customer_id/nombre/email/teléfono quedaban vacíos). Mismos campos
+    # que rellena la conversión desde presupuesto.
+    customer_fields = {}
+    if customer is not None:
+        full_name = f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+        customer_fields = {
+            "customer_id": customer.id,
+            "customer_name": full_name or customer.company_name or customer.email,
+            "customer_email": customer.email,
+            "customer_phone": customer.phone,
+        }
+
     # Create sales order
     sales_order = SalesOrder(
         user_id=user_id,
@@ -610,6 +623,7 @@ def create_sales_order(
         shipping_country=shipping_country,
         customer_notes=customer_notes,
         internal_notes=internal_notes,
+        **customer_fields,
     )
 
     db.add(sales_order)
