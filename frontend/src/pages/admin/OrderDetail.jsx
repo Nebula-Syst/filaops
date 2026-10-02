@@ -144,7 +144,7 @@ export default function OrderDetail() {
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [orderInvoice, setOrderInvoice] = useState(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
-  const [sendingInvoice, setSendingInvoice] = useState(false);
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
 
   const isBillingReleaseSatisfied = () => {
     const invoiceStatus = orderInvoice?.status || "";
@@ -724,22 +724,9 @@ export default function OrderDetail() {
     }
   };
 
-  const handleSendOrderInvoice = async () => {
-    if (!orderInvoice) return;
-    setSendingInvoice(true);
-    try {
-      const invoice = await api.post(`/api/v1/invoices/${orderInvoice.id}/send`);
-      setOrderInvoice(invoice);
-      toast.success(`Invoice ${invoice.invoice_number} marked as sent`);
-    } catch (err) {
-      toast.error(err.response?.data?.detail || err.message || "Failed to mark invoice sent");
-    } finally {
-      setSendingInvoice(false);
-    }
-  };
-
   const handleDownloadOrderInvoice = async () => {
     if (!orderInvoice) return;
+    setDownloadingInvoice(true);
     try {
       const response = await fetch(
         `${API_URL}/api/v1/invoices/${orderInvoice.id}/pdf`,
@@ -755,8 +742,17 @@ export default function OrderDetail() {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
+      // PrintFlow: descargar la factura cuenta como entregarla al cliente
+      // (equivale a "Marcar como enviada", que nunca envía emails).
+      if (orderInvoice.status === "draft") {
+        const sent = await api.post(`/api/v1/invoices/${orderInvoice.id}/send`);
+        setOrderInvoice(sent);
+        await fetchOrder();
+      }
     } catch (err) {
       toast.error(err.message || "Failed to download invoice PDF");
+    } finally {
+      setDownloadingInvoice(false);
     }
   };
 
@@ -866,7 +862,6 @@ export default function OrderDetail() {
         productionOrders={productionOrders}
         materialRequirements={materialRequirements}
         generatingInvoice={generatingInvoice}
-        sendingInvoice={sendingInvoice}
         confirmingOrder={confirmingOrder}
         hasOrderProduct={hasOrderProduct}
         hasMainProductWO={hasMainProductWO}
@@ -877,7 +872,8 @@ export default function OrderDetail() {
         onConfirmOrder={handleConfirmOrder}
         onCreateProductionOrder={handleCreateProductionOrder}
         onGenerateInvoice={handleGenerateInvoice}
-        onSendInvoice={handleSendOrderInvoice}
+        onDownloadInvoice={handleDownloadOrderInvoice}
+        downloadingInvoice={downloadingInvoice}
         onRecordPayment={() => {
           setIsRefund(false);
           setShowPaymentModal(true);

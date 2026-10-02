@@ -69,3 +69,16 @@ describe("Marca PrintFlow", () => {
     expect(en("e.g., filaops.local or mycompany.com")).toBeNull();
   });
 });
+
+describe("Paso Factura / pago (diccionario real)", () => {
+  const t = createTranslator(es);
+  it("estados de factura en el paso", () => {
+    expect(t("INV-2026-001 · partially paid")).toBe("INV-2026-001 · pagada en parte");
+    expect(t("INV-2026-001 · draft")).toBe("INV-2026-001 · borrador");
+    expect(t("INV-2026-001 · sent")).toBe("INV-2026-001 · enviada");
+  });
+  it("botones del paso", () => {
+    expect(t("Download Invoice")).toBe("Descargar factura");
+    expect(t("Open Invoice")).toBe("Abrir factura");
+  });
+});

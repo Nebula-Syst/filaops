@@ -37,7 +37,6 @@ export default function OrderWorkflowPanel({
   productionOrders,
   materialRequirements,
   generatingInvoice,
-  sendingInvoice,
   confirmingOrder,
   hasOrderProduct,
   hasMainProductWO,
@@ -48,7 +47,8 @@ export default function OrderWorkflowPanel({
   onConfirmOrder,
   onCreateProductionOrder,
   onGenerateInvoice,
-  onSendInvoice,
+  onDownloadInvoice,
+  downloadingInvoice,
   onRecordPayment,
   onRejectOrder,
   onCancelOrder,
@@ -167,6 +167,13 @@ export default function OrderWorkflowPanel({
     const releaseBlockReason = getProductionReleaseBlockReason();
     const shipBlockReason = getShipBlockReason();
 
+    // PrintFlow: pagado = pedido marcado como pagado, algún pago registrado o
+    // factura cobrada. Hasta entonces la factura siempre se puede descargar.
+    const orderPaid =
+      order?.payment_status === "paid" ||
+      hasPayment ||
+      ["paid", "partially_paid"].includes(invoiceStatus);
+
     const billingAction = (() => {
       if (canGenerateInvoice()) {
         return {
@@ -175,11 +182,13 @@ export default function OrderWorkflowPanel({
           disabled: generatingInvoice,
         };
       }
-      if (orderInvoice?.status === "draft") {
+      // PrintFlow: en vez de "Marcar como enviada", descargar el PDF (al
+      // descargarla se marca como entregada, lo que libera la producción).
+      if (orderInvoice && !orderPaid) {
         return {
-          label: sendingInvoice ? "Marking..." : "Mark Sent",
-          onClick: onSendInvoice,
-          disabled: sendingInvoice,
+          label: downloadingInvoice ? "Downloading..." : "Download Invoice",
+          onClick: onDownloadInvoice,
+          disabled: downloadingInvoice,
         };
       }
       if (!billingReleased && orderConfirmed) {
@@ -233,9 +242,13 @@ export default function OrderWorkflowPanel({
           : hasPayment
           ? `${formatMoney(paymentSummary?.total_paid)} paid`
           : "Not released",
-        detail: billingReleased
+        detail: hasInvoice && !orderPaid
+          ? billingReleased
+            ? "Invoice delivered. Download it again whenever you need it; record the payment when you collect it."
+            : "Download the invoice to give it to the customer. That releases production."
+          : billingReleased
           ? "Billing requirement is satisfied for production release."
-          : "Send an invoice or record payment before production.",
+          : "Create the invoice or record a payment before production.",
         action: billingAction,
       },
       {
