@@ -61,10 +61,10 @@ export default function ReviewStep({
         </h4>
         {selectedCustomer ? (
           <div>
-            <div className="text-white">{selectedCustomer.name}</div>
-            {selectedCustomer.company && (
+            <div className="text-white">{selectedCustomer.full_name || selectedCustomer.name || selectedCustomer.company_name}</div>
+            {(selectedCustomer.company_name || selectedCustomer.company) && (
               <div className="text-gray-400 text-sm">
-                {selectedCustomer.company}
+                {selectedCustomer.company_name || selectedCustomer.company}
               </div>
             )}
             <div className="text-gray-400 text-sm">
