@@ -849,11 +849,12 @@
   "Create production order first": "Crea primero la orden de producción",
   "Create production order for": "Crear orden de producción para",
   "Create replacement order": "Crear pedido de sustitución",
+  "Create the invoice or record a payment before production.": "Crea la factura o registra un pago antes de producir.",
   "Create your admin account to get started": "Crea tu cuenta de administrador para empezar",
   "Create your first BOM to define product assembly and material requirements.": "Crea tu primer BOM para definir el ensamblaje del producto y sus necesidades de material.",
   "Create your first quote to start the sales process.": "Crea tu primer presupuesto para empezar el proceso de venta.",
   "Create your first sales order to get started.": "Crea tu primer pedido de venta para empezar.",
-  "Create/send an invoice or record payment before production release": "Crea/envía una factura o registra un pago antes de liberar la producción",
+  "Create/send an invoice or record payment before production release": "Crea y descarga la factura o registra un pago antes de liberar la producción",
   "Created": "Creado",
   "Created by": "Creado por",
   "Created for stock or internal production.": "Creado para stock o producción interna.",
@@ -999,6 +1000,7 @@
   "Double-click to start everything": "Doble clic para arrancarlo todo",
   "Download": "Descargar",
   "Download Caddy (Free)": "Descargar Caddy (gratis)",
+  "Download Invoice": "Descargar factura",
   "Download Ollama": "Descargar Ollama",
   "Download PDF": "Descargar PDF",
   "Download Template": "Descargar plantilla",
@@ -1006,7 +1008,9 @@
   "Download our CSV template to see the required format. Fill it with your material data and upload it here.": "Descarga nuestra plantilla CSV para ver el formato necesario. Rellénala con los datos de tus materiales y súbela aquí.",
   "Download our CSV template to see the required format. Fill it with your order data and upload it here.": "Descarga nuestra plantilla CSV para ver el formato necesario. Rellénala con los datos de tus pedidos y súbela aquí.",
   "Download slice file": "Descargar archivo laminado",
+  "Download the invoice to give it to the customer. That releases production.": "Descarga la factura para dársela al cliente. Con eso se libera la producción.",
   "Downloading PRO package…": "Descargando paquete PRO…",
+  "Downloading...": "Descargando...",
   "Downloads the wheel from the license server and installs it locally. No terminal access required.": "Descarga el paquete desde el servidor de licencias y lo instala localmente. No hace falta terminal.",
   "Downtime": "Tiempo de parada",
   "Downtime (minutes)": "Tiempo de parada (minutos)",
@@ -1559,6 +1563,7 @@
   "Invoice #": "Factura n.º",
   "Invoice / Payment": "Factura / pago",
   "Invoice Date": "Fecha de factura",
+  "Invoice delivered. Download it again whenever you need it; record the payment when you collect it.": "Factura entregada. Descárgala de nuevo cuando la necesites; registra el pago cuando cobres.",
   "Invoice marked as sent": "Factura marcada como enviada",
   "Invoice on this order": "Factura de este pedido",
   "Invoice payment": "Pago de factura",
@@ -2135,7 +2140,7 @@
   "Open B2B Portal Admin": "Abrir administración del portal B2B",
   "Open BOM editor": "Abrir editor de BOM",
   "Open Bambuddy": "Abrir Bambuddy",
-  "Open Invoice": "Factura abierta",
+  "Open Invoice": "Abrir factura",
   "Open Invoices": "Facturas abiertas",
   "Open License": "Licencia abierta",
   "Open PO Supply": "Suministro de pedidos de compra abiertos",
@@ -3680,6 +3685,7 @@
   "ZIP": "C.P.",
   "ZIP Code": "Código postal",
   "ZIP code must be 5 digits or 5+4 format (e.g., 12345 or 12345-6789)": "El código postal debe tener 5 dígitos o formato 5+4 (p. ej. 12345 o 12345-6789)",
+  "active": "activo",
   "additional code": "código adicional",
   "adjustment": "ajuste",
   "advanced: custom operation code": "avanzado: código de operación personalizado",
@@ -3692,7 +3698,9 @@
   "avail": "disp.",
   "available)": "disponibles)",
   "before creating variants.": "antes de crear variantes.",
+  "blocked": "bloqueado",
   "by": "por",
+  "cancelled": "cancelado",
   "catalog are automatically included for new items. Catalogs sync to the hosted portal every 15 minutes.": "se incluyen automáticamente en los artículos nuevos. Los catálogos se sincronizan con el portal alojado cada 15 minutos.",
   "catalogs are only visible to assigned customers. Products in the": "solo los ven los clientes asignados. Los productos del catálogo",
   "catalogs are visible to all portal users.": "los ven todos los usuarios del portal.",
@@ -3705,6 +3713,7 @@
   "component": "componente",
   "component(s)": "componente(s)",
   "components)": "componentes)",
+  "confirmed": "confirmado",
   "cost / (1 -": "coste / (1 -",
   "counted at system qty — no adjustment": "contado con la cant. del sistema: sin ajuste",
   "create a new product first": "crea primero un producto nuevo",
@@ -3716,6 +3725,7 @@
   "customers": "clientes",
   "day": "día",
   "default": "por defecto",
+  "done": "hecho",
   "down": "caído",
   "downloaded from GitHub": "descargado de GitHub",
   "draft": "borrador",
@@ -3781,6 +3791,7 @@
   "in a moment": "en un momento",
   "in order": "en orden",
   "in pipeline": "en el embudo",
+  "in production": "en producción",
   "in progress": "en curso",
   "in queue": "en cola",
   "in tax. This will appear here when those orders are shipped (accrual accounting per GAAP).": "de impuestos. Aparecerá aquí cuando se envíen esos pedidos (devengo según GAAP).",
@@ -3847,9 +3858,12 @@
   "out of pocket": "coste real",
   "out. Slice it in Bambu Studio and drop the exported .gcode.3mf (it": "el tiempo. Lamínalo en Bambu Studio y suelta el .gcode.3mf exportado (se",
   "outstanding": "pendiente",
+  "overdue": "vencida",
   "packaging": "embalaje",
   "page, where it lives alongside Shopify, QuickBooks, and other connector configuration. API keys are now encrypted at rest.": "página, junto a Shopify, QuickBooks y la configuración de otros conectores. Las claves de API ahora se guardan cifradas.",
+  "paid": "pagada",
   "parsing…": "analizando…",
+  "partially paid": "pagada en parte",
   "passed,": "superadas,",
   "payment": "pago",
   "pending": "pendiente",
@@ -3866,6 +3880,7 @@
   "quotes": "presupuestos",
   "quotes, not revenue": "presupuestos, no ingresos",
   "ready": "listo",
+  "ready to ship": "listo para enviar",
   "ready to use for common filaments": "listos para usar con los filamentos habituales",
   "received": "recibido",
   "released to floor": "liberado a taller",
@@ -3888,6 +3903,7 @@
   "selected": "seleccionados",
   "selected item": "artículo seleccionado",
   "selected)": "seleccionados)",
+  "sent": "enviada",
   "set a price above": "pon un precio arriba",
   "shipped": "enviado",
   "skipped": "omitidos",
@@ -3932,6 +3948,9 @@
   "value": "valor",
   "variant": "variante",
   "via routing": "por la ruta",
+  "void": "anulada",
+  "voided": "anulada",
+  "waiting": "en espera",
   "warnings,": "avisos,",
   "were neither completed nor scrapped. Check this box to confirm.": "no se completaron ni se desecharon. Marca esta casilla para confirmar.",
   "when ready.": "cuando esté listo.",
@@ -4549,6 +4568,10 @@
    "· {0} op. por programar"
   ],
   [
+   "{0} · partially paid",
+   "{0} · pagada en parte"
+  ],
+  [
    "Completed: {0} good",
    "Completado: {0} buenas"
   ],
@@ -4761,6 +4784,10 @@
    "{0}: faltan {1}"
   ],
   [
+   "{0} · cancelled",
+   "{0} · cancelada"
+  ],
+  [
    ", {0} scrapped",
    ", {0} desechadas"
   ],
@@ -4837,6 +4864,10 @@
    "{0} restantes"
   ],
   [
+   "{0} · overdue",
+   "{0} · vencida"
+  ],
+  [
    "Printer #{0}",
    "Impresora n.º {0}"
   ],
@@ -4863,6 +4894,10 @@
   [
    "{0} — Plate {1}",
    "{0} — Placa {1}"
+  ],
+  [
+   "{0} · voided",
+   "{0} · anulada"
   ],
   [
    "Edit PO {0}",
@@ -4895,6 +4930,10 @@
   [
    "{0} overdue",
    "{0} vencidas"
+  ],
+  [
+   "{0} · draft",
+   "{0} · borrador"
   ],
   [
    "Delete {0}",
@@ -4935,6 +4974,18 @@
   [
    "{0}/{1} ready",
    "{0}/{1} listos"
+  ],
+  [
+   "{0} · sent",
+   "{0} · enviada"
+  ],
+  [
+   "{0} · paid",
+   "{0} · pagada"
+  ],
+  [
+   "{0} · void",
+   "{0} · anulada"
   ],
   [
    "+{0} more",
