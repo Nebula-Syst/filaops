@@ -1,0 +1,30 @@
+/*
+ * PrintFlow — tema oscuro único.
+ *
+ * Upstream está a mitad de migrar de su tema antiguo (oscuro azul marino, tokens
+ * --bg-*) al nuevo "Workbench" (tokens --paper/--ink), cuyo valor por defecto es
+ * CLARO. Resultado: menú y la mayoría de páginas oscuros, pero el detalle de
+ * pedido, producción, envíos y sus modales con cajas blancas.
+ *
+ * Aquí se activa el modo oscuro del propio upstream (data-theme="dim", que pone
+ * nebula/theme.js en <html>) y se ajustan sus superficies al azul marino del
+ * tema antiguo para que todo combine. Solo cambia valores de variables.
+ */
+[data-theme="dim"] {
+  --paper:      #1C1C32;   /* = --bg-card */
+  --paper-sunk: #161628;   /* = --bg-secondary */
+  --ink:        #F4F4F6;
+  --ink-2:      #D4D4DC;
+  --ink-3:      #A1A1AE;
+  --ink-4:      #7A7A8C;
+  --rule-hair:  #2C2C46;   /* algo más claro que --border-subtle para que se vea */
+
+  --accent:       #3B9EFF; /* azul de la marca PrintFlow */
+  --accent-ink:   #0B0D17;
+  --accent-press: #6CB6FF;
+  --accent-tint:  #13274A;
+
+  --glass-bg:   rgba(28, 28, 50, 0.72);
+  --glass-fill: rgba(255, 255, 255, 0.05);
+  --glass-sel:  rgba(255, 255, 255, 0.09);
+}

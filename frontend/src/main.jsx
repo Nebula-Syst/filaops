@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './nebula/i18n'
 import './index.css'
 import './nebula/responsive.css'
+import './nebula/theme'
 import App from './App.jsx'
 
 createRoot(document.getElementById('root')).render(
