@@ -1,6 +1,6 @@
 """Invoice Pydantic schemas."""
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Literal, Optional, List
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -40,6 +40,7 @@ class InvoiceResponse(BaseModel):
     id: int
     invoice_number: str
     sales_order_id: Optional[int] = None
+    language: Optional[str] = None  # PrintFlow: idioma del PDF
     customer_id: Optional[int] = None
     customer_name: Optional[str] = None
     customer_email: Optional[str] = None
@@ -97,3 +98,8 @@ class InvoiceListResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class InvoiceLanguageUpdate(BaseModel):
+    """PrintFlow: idioma del PDF de la factura."""
+    language: Literal["es", "en"]

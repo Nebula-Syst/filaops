@@ -62,6 +62,8 @@ class Invoice(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     sent_at = Column(DateTime(timezone=True), nullable=True)
     pdf_path = Column(String(500), nullable=True)
+    # PrintFlow: idioma del PDF ("es"/"en"); NULL = el de la empresa (migración nebula_002)
+    language = Column(String(5), nullable=True)
 
     # Relationships
     lines = relationship("InvoiceLine", back_populates="invoice", cascade="all, delete-orphan")

@@ -9,6 +9,7 @@ from app.api.v1.deps import get_current_staff_user
 from app.models.user import User
 from app.models.sales_order import SalesOrder
 from app.schemas.invoice import (
+    InvoiceLanguageUpdate,
     InvoiceCreate,
     InvoiceUpdate,
     InvoiceResponse,
@@ -152,10 +153,11 @@ def update_invoice(
 @router.get("/{invoice_id}/pdf")
 def download_invoice_pdf(
     invoice_id: int,
+    lang: Optional[str] = Query(None, pattern="^(es|en)$", description="PrintFlow: idioma del PDF (por defecto, el de la factura)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_staff_user),
 ):
-    pdf_buffer = invoice_service.generate_invoice_pdf(db, invoice_id)
+    pdf_buffer = invoice_service.generate_invoice_pdf(db, invoice_id, language=lang)
     invoice = invoice_service.get_invoice(db, invoice_id)
     return StreamingResponse(
         pdf_buffer,
@@ -192,4 +194,19 @@ def void_invoice(
     invoice = invoice_service.void_invoice(
         db, invoice_id, reason=data.reason, voided_by_id=current_user.id
     )
+    return _build_invoice_response(invoice, db)
+
+
+@router.put("/{invoice_id}/language", response_model=InvoiceResponse)
+def set_invoice_language(
+    invoice_id: int,
+    data: InvoiceLanguageUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_staff_user),
+):
+    """PrintFlow: cambia el idioma del PDF. No afecta a importes ni a contabilidad."""
+    invoice = invoice_service.get_invoice(db, invoice_id)
+    invoice.language = data.language
+    db.commit()
+    db.refresh(invoice)
     return _build_invoice_response(invoice, db)
