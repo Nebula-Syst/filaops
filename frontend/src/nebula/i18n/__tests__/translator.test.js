@@ -82,3 +82,11 @@ describe("Paso Factura / pago (diccionario real)", () => {
     expect(t("Open Invoice")).toBe("Abrir factura");
   });
 });
+
+describe("Órdenes de trabajo en el paso 3", () => {
+  const t = createTranslator(es);
+  it("singular y plural", () => {
+    expect(t("1 work order")).toBe("1 orden de trabajo");
+    expect(t("3 work orders")).toBe("3 órdenes de trabajo");
+  });
+});
