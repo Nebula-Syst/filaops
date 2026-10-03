@@ -49,6 +49,7 @@ export default function OrderWorkflowPanel({
   onGenerateInvoice,
   onDownloadInvoice,
   downloadingInvoice,
+  creatingProduction,
   onRecordPayment,
   onRejectOrder,
   onCancelOrder,
@@ -277,8 +278,9 @@ export default function OrderWorkflowPanel({
             }
           : !releaseBlockReason
           ? {
-              label: "Create Work Orders",
+              label: creatingProduction ? "Creating..." : "Create Work Orders",
               onClick: onCreateProductionOrder,
+              disabled: creatingProduction,
             }
           : null,
       },

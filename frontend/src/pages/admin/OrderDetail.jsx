@@ -146,6 +146,7 @@ export default function OrderDetail() {
   const [orderInvoice, setOrderInvoice] = useState(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [downloadingInvoice, setDownloadingInvoice] = useState(false);
+  const [creatingProduction, setCreatingProduction] = useState(false);
 
   const isBillingReleaseSatisfied = () => {
     const invoiceStatus = orderInvoice?.status || "";
@@ -536,12 +537,14 @@ export default function OrderDetail() {
   };
 
   const handleCreateProductionOrder = async () => {
+    if (creatingProduction) return; // PrintFlow: evitar duplicados por doble clic
     const blockReason = getProductionReleaseBlockReason();
     if (blockReason) {
       toast.error(blockReason);
       return;
     }
 
+    setCreatingProduction(true);
     try {
       const result = await api.post(
         `/api/v1/sales-orders/${orderId}/generate-production-orders`
@@ -558,6 +561,8 @@ export default function OrderDetail() {
       setWizardPending(true);
     } catch (err) {
       toast.error(err.message);
+    } finally {
+      setCreatingProduction(false);
     }
   };
 
@@ -875,6 +880,7 @@ export default function OrderDetail() {
         onGenerateInvoice={handleGenerateInvoice}
         onDownloadInvoice={handleDownloadOrderInvoice}
         downloadingInvoice={downloadingInvoice}
+        creatingProduction={creatingProduction}
         onRecordPayment={() => {
           setIsRefund(false);
           setShowPaymentModal(true);
