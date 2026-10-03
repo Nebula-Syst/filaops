@@ -3,13 +3,19 @@ Production Order Pydantic Schemas
 
 Manufacturing Orders (MOs) for tracking production of finished goods.
 """
-from pydantic import BaseModel, Field, computed_field, model_validator
-from typing import Any, Dict, Optional, List
+from pydantic import BaseModel, Field, PlainSerializer, computed_field, model_validator
+from typing import Annotated, Any, Dict, Optional, List
 from datetime import datetime, date
 from decimal import Decimal
 from enum import Enum
 
 from app.schemas.defect_reason import DefectReasonBrief
+
+# PrintFlow: las cantidades se guardan como Numeric(18,4) y Pydantic las mandaba
+# al navegador como texto ("1.0000"). Las pantallas las pintan tal cual y en
+# español "1.0000" se lee como mil. En las respuestas se envían como número
+# (1, 2.5…); la precisión de 4 decimales cabe de sobra en un float.
+QtyOut = Annotated[Decimal, PlainSerializer(float, return_type=float, when_used="json")]
 
 
 # ============================================================================
@@ -129,8 +135,8 @@ class ProductionOrderOperationResponse(BaseModel):
     operation_name: Optional[str] = None
     status: str
 
-    quantity_completed: Decimal = 0
-    quantity_scrapped: Decimal = 0
+    quantity_completed: QtyOut = 0
+    quantity_scrapped: QtyOut = 0
 
     planned_setup_minutes: Decimal = 0
     planned_run_minutes: Decimal
@@ -248,8 +254,8 @@ class ProductionOrderListResponse(BaseModel):
     product_sku: Optional[str] = None
     product_name: Optional[str] = None
 
-    quantity_ordered: Decimal
-    quantity_completed: Decimal = 0
+    quantity_ordered: QtyOut
+    quantity_completed: QtyOut = 0
     quantity_remaining: float = 0
     completion_percent: float = 0
 
@@ -309,9 +315,9 @@ class ProductionOrderResponse(BaseModel):
     sales_order_line_id: Optional[int] = None
 
     # Quantities
-    quantity_ordered: Decimal
-    quantity_completed: Decimal = 0
-    quantity_scrapped: Decimal = 0
+    quantity_ordered: QtyOut
+    quantity_completed: QtyOut = 0
+    quantity_scrapped: QtyOut = 0
     quantity_remaining: float = 0
     completion_percent: float = 0
 
@@ -458,8 +464,8 @@ class ProductionQueueItem(BaseModel):
     code: str
     product_sku: str
     product_name: str
-    quantity_ordered: Decimal
-    quantity_completed: Decimal = 0
+    quantity_ordered: QtyOut
+    quantity_completed: QtyOut = 0
     status: str
     priority: int
     due_date: Optional[date] = None

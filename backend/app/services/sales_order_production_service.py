@@ -337,6 +337,13 @@ def generate_production_orders(
     """
     from app.services.inventory_service import reserve_production_materials
 
+    # PrintFlow: bloquear la fila del pedido hasta el commit. Sin esto, dos
+    # peticiones casi simultáneas (doble clic en "Crear órdenes de trabajo")
+    # pasaban las dos la comprobación de "ya existen" y creaban órdenes duplicadas.
+    # La segunda espera aquí y después ve las órdenes de la primera.
+    if db.bind is not None and db.bind.dialect.name == "postgresql":
+        db.query(SalesOrder.id).filter(SalesOrder.id == order_id).with_for_update().first()
+
     order = get_sales_order(db, order_id)
 
     if order.status == "cancelled":
