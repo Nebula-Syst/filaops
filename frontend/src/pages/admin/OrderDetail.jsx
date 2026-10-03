@@ -551,8 +551,9 @@ export default function OrderDetail() {
       );
 
       toast.success("Production order created successfully!");
-      fetchProductionOrders();
-      fetchOrder();
+      // PrintFlow: esperar a tener la orden en pantalla antes de soltar el botón;
+      // así pasa directamente a "Abrir orden de trabajo" y no se puede pulsar otra vez.
+      await Promise.all([fetchProductionOrders(), fetchOrder()]);
 
       // SCHED-3b: offer the guided schedule wizard after release.
       // Remember WHICH orders this call created (by code) so the wizard

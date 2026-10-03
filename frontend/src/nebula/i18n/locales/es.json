@@ -131,6 +131,7 @@
   "0=Monday, 1=Tuesday, ..., 6=Sunday. Example: \"0,1,2,3,4\" for Mon-Fri": "0=Lunes, 1=Martes, ..., 6=Domingo. Ejemplo: \"0,1,2,3,4\" para lunes a viernes",
   "1 - Urgent": "1 - Urgente",
   "1 operation scheduled": "1 operación programada",
+  "1 work order": "1 orden de trabajo",
   "1-7 (default: 5 for Mon-Fri)": "1-7 (por defecto: 5, de lunes a viernes)",
   "100 per page": "100 por página",
   "123 Main Street": "Calle Mayor 123",
@@ -4788,6 +4789,10 @@
   [
    "{0} · cancelled",
    "{0} · cancelada"
+  ],
+  [
+   "{0} work orders",
+   "{0} órdenes de trabajo"
   ],
   [
    ", {0} scrapped",
