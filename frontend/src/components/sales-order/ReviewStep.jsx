@@ -3,6 +3,8 @@
  * Displays order summary: customer info, shipping, line items with totals, tax, and notes.
  * Supports both product and raw material line items.
  */
+import { deliveryMethodLabel } from "../../nebula/delivery";
+
 const STATE_ALIASES = {
   INDIANA: "IN",
 };
@@ -30,7 +32,8 @@ export default function ReviewStep({
 }) {
   const subtotal = Number.isFinite(orderTotal) ? orderTotal : 0;
   const parsedShippingCost = parseFloat(orderData.shipping_cost);
-  const shippingCost = Number.isNaN(parsedShippingCost)
+  const isPickup = orderData.delivery_method === "pickup";
+  const shippingCost = isPickup || Number.isNaN(parsedShippingCost)
     ? 0
     : Math.max(0, parsedShippingCost);
   const taxRate = taxSettings.tax_enabled && taxSettings.tax_rate > 0
@@ -78,20 +81,23 @@ export default function ReviewStep({
         )}
       </div>
 
-      {/* Shipping */}
-      {orderData.shipping_address_line1 && (
-        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-          <h4 className="text-md font-medium text-white mb-3">
-            Ship To
-          </h4>
-          <div className="text-gray-300 text-sm">
+      {/* Shipping (PrintFlow: con el método de entrega) */}
+      <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+        <h4 className="text-md font-medium text-white mb-3">
+          Delivery Method
+        </h4>
+        <div className="text-gray-300 text-sm">
+          {deliveryMethodLabel(orderData.delivery_method)}
+        </div>
+        {!isPickup && orderData.shipping_address_line1 && (
+          <div className="text-gray-300 text-sm mt-2">
             {orderData.shipping_address_line1}
             <br />
             {orderData.shipping_city}, {orderData.shipping_state}{" "}
             {orderData.shipping_zip}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Line Items */}
       <div className="bg-gray-800/50 rounded-lg border border-gray-700">

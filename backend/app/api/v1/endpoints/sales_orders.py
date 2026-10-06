@@ -147,6 +147,7 @@ def build_sales_order_response(order: SalesOrder, db: Session) -> SalesOrderResp
         "customer_name": getattr(order, "customer_name", None),
         "customer_email": getattr(order, "customer_email", None),
         "customer_phone": getattr(order, "customer_phone", None),
+        "delivery_method": getattr(order, "delivery_method", None) or "ship",
         "shipping_address_line1": order.shipping_address_line1,
         "shipping_address_line2": order.shipping_address_line2,
         "shipping_city": order.shipping_city,
@@ -348,6 +349,7 @@ async def create_sales_order(
         lines=lines,
         source=request.source or "manual",
         source_order_id=request.source_order_id,
+        delivery_method=request.delivery_method,
         shipping_address_line1=request.shipping_address_line1,
         shipping_address_line2=request.shipping_address_line2,
         shipping_city=request.shipping_city,
@@ -888,6 +890,7 @@ async def update_shipping_address(
         db,
         order_id=order_id,
         user_id=current_user.id,
+        delivery_method=update.delivery_method,
         shipping_address_line1=update.shipping_address_line1,
         shipping_address_line2=update.shipping_address_line2,
         shipping_city=update.shipping_city,
@@ -1120,7 +1123,8 @@ async def delete_sales_order(
 
 class ShipOrderRequest(BaseModel):
     """Request to ship an order."""
-    carrier: str = "USPS"
+    # PrintFlow: en entrega en mano / recogida no hay transportista (se ignora)
+    carrier: Optional[str] = "USPS"
     service: Optional[str] = "Priority"
     tracking_number: Optional[str] = None
 
@@ -1142,7 +1146,7 @@ async def ship_order(
         order_id=order_id,
         user_id=current_user.id,
         user_email=current_user.email,
-        carrier=request.carrier,
+        carrier=request.carrier or "USPS",
         service=request.service,
         tracking_number=request.tracking_number,
     )

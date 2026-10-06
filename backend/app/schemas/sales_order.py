@@ -7,6 +7,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from app.schemas.fulfillment_status import FulfillmentStatusSummary
+from app.core.nebula_delivery import DeliveryMethod
 
 
 # ============================================================================
@@ -79,6 +80,8 @@ class SalesOrderCreate(BaseModel):
     source_order_id: Optional[str] = Field(None, max_length=255, description="External order ID")
 
     # Shipping
+    # PrintFlow: envío, entrega en mano o recogida (solo "ship" exige dirección)
+    delivery_method: DeliveryMethod = "ship"
     shipping_address_line1: Optional[str] = Field(None, max_length=255)
     shipping_address_line2: Optional[str] = Field(None, max_length=255)
     shipping_city: Optional[str] = Field(None, max_length=100)
@@ -135,6 +138,7 @@ class SalesOrderUpdateShipping(BaseModel):
 
 class SalesOrderUpdateAddress(BaseModel):
     """Update shipping address on an order"""
+    delivery_method: Optional[DeliveryMethod] = None  # PrintFlow
     shipping_address_line1: Optional[str] = Field(None, max_length=255)
     shipping_address_line2: Optional[str] = Field(None, max_length=255)
     shipping_city: Optional[str] = Field(None, max_length=100)
@@ -207,6 +211,7 @@ class SalesOrderListResponse(SalesOrderBase):
     submitted_at: Optional[datetime] = None
     estimated_completion_date: Optional[datetime]
     # Shipping address fields for shipping page
+    delivery_method: str = "ship"  # PrintFlow
     shipping_address_line1: Optional[str] = None
     shipping_address_line2: Optional[str] = None
     shipping_city: Optional[str] = None
@@ -283,6 +288,7 @@ class SalesOrderResponse(SalesOrderBase):
     actual_completion_date: Optional[datetime]
 
     # Shipping
+    delivery_method: str = "ship"  # PrintFlow
     shipping_address_line1: Optional[str]
     shipping_address_line2: Optional[str]
     shipping_city: Optional[str]

@@ -292,6 +292,7 @@ def create_sales_order(
     lines: list[dict],
     source: str = "manual",
     source_order_id: Optional[str] = None,
+    delivery_method: str = "ship",
     shipping_address_line1: Optional[str] = None,
     shipping_address_line2: Optional[str] = None,
     shipping_city: Optional[str] = None,
@@ -615,6 +616,7 @@ def create_sales_order(
         status="pending",
         payment_status="pending",
         rush_level="standard",
+        delivery_method=delivery_method or "ship",
         shipping_address_line1=shipping_address_line1,
         shipping_address_line2=shipping_address_line2,
         shipping_city=shipping_city,
@@ -1064,11 +1066,32 @@ def update_shipping_address(
     shipping_zip: Optional[str] = None,
     shipping_country: Optional[str] = None,
     shipping_cost: Optional[Decimal] = None,
+    delivery_method: Optional[str] = None,
 ) -> SalesOrder:
     """Update shipping address and customer-facing shipping charge for an order."""
     order = get_sales_order(db, order_id)
     address_changed = False
     shipping_cost_changed = False
+
+    # PrintFlow: cambiar entre envío / entrega en mano / recogida. Solo mientras
+    # el pedido no ha salido del taller.
+    if delivery_method is not None and delivery_method != (order.delivery_method or "ship"):
+        if order.status in ("shipped", "delivered", "completed", "cancelled"):
+            raise HTTPException(
+                status_code=409,
+                detail="The delivery method can't be changed once the order is shipped, delivered or cancelled.",
+            )
+        old_method = order.delivery_method or "ship"
+        order.delivery_method = delivery_method
+        record_order_event(
+            db=db,
+            order_id=order_id,
+            event_type="delivery_method_updated",
+            title="Delivery method updated",
+            old_value=old_method,
+            new_value=delivery_method,
+            user_id=user_id,
+        )
 
     if shipping_address_line1 is not None:
         order.shipping_address_line1 = shipping_address_line1

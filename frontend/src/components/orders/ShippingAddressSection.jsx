@@ -6,6 +6,8 @@
 import { useState } from "react";
 import { API_URL } from "../../config/api";
 import { useToast } from "../Toast";
+import DeliveryMethodSelect from "../../nebula/DeliveryMethodSelect";
+import { deliveryMethodLabel, needsShipping } from "../../nebula/delivery";
 
 export default function ShippingAddressSection({ order, onOrderUpdated }) {
   const toast = useToast();
@@ -14,9 +16,13 @@ export default function ShippingAddressSection({ order, onOrderUpdated }) {
   const [addressForm, setAddressForm] = useState({});
   const shippingCharge = Number.parseFloat(order.shipping_cost || 0);
   const grandTotal = Number.parseFloat(order.grand_total ?? order.total_price ?? 0);
+  // PrintFlow: el método de entrega solo se cambia antes de que el pedido salga
+  const methodLocked = ["shipped", "delivered", "completed", "cancelled"].includes(order.status);
+  const isPickup = order.delivery_method === "pickup";
 
   const handleEditAddress = () => {
     setAddressForm({
+      delivery_method: order.delivery_method || "ship",
       shipping_address_line1: order.shipping_address_line1 || "",
       shipping_address_line2: order.shipping_address_line2 || "",
       shipping_city: order.shipping_city || "",
@@ -36,6 +42,10 @@ export default function ShippingAddressSection({ order, onOrderUpdated }) {
         ...addressForm,
         shipping_cost: Number.isNaN(parsedShippingCost) ? 0 : parsedShippingCost,
       };
+      // El backend rechaza cambiar el método con el pedido ya entregado
+      if (methodLocked || payload.delivery_method === (order.delivery_method || "ship")) {
+        delete payload.delivery_method;
+      }
       const res = await fetch(
         `${API_URL}/api/v1/sales-orders/${order.id}/address`,
         {
@@ -51,7 +61,7 @@ export default function ShippingAddressSection({ order, onOrderUpdated }) {
         throw new Error(err.detail || "Failed to update address");
       }
 
-      toast.success("Shipping address updated");
+      toast.success("Delivery details updated");
       setEditingAddress(false);
       onOrderUpdated();
     } catch (err) {
@@ -64,7 +74,9 @@ export default function ShippingAddressSection({ order, onOrderUpdated }) {
   return (
     <div className="bg-[var(--paper)] border border-[var(--rule-hair)] rounded-xl p-6 shadow-[var(--shadow-pop)]">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-[var(--ink)]">Shipping Address</h2>
+        <h2 className="text-lg font-semibold text-[var(--ink)]">
+          {needsShipping(order) ? "Shipping Address" : "Delivery"}
+        </h2>
         {!editingAddress && (
           <button
             onClick={handleEditAddress}
@@ -77,6 +89,18 @@ export default function ShippingAddressSection({ order, onOrderUpdated }) {
 
       {editingAddress ? (
         <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-[var(--ink-3)] mb-1">
+              Delivery Method
+            </label>
+            <DeliveryMethodSelect
+              value={addressForm.delivery_method}
+              disabled={methodLocked}
+              onChange={(delivery_method) =>
+                setAddressForm({ ...addressForm, delivery_method })
+              }
+            />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 md:col-span-1">
               <label className="block text-sm text-[var(--ink-3)] mb-1">
@@ -96,6 +120,8 @@ export default function ShippingAddressSection({ order, onOrderUpdated }) {
                 step="0.01"
               />
             </div>
+            {addressForm.delivery_method !== "pickup" && (
+            <>
             <div className="col-span-2">
               <label className="block text-sm text-[var(--ink-3)] mb-1">
                 Address Line 1
@@ -192,6 +218,8 @@ export default function ShippingAddressSection({ order, onOrderUpdated }) {
                 className="w-full bg-[var(--paper-sunk)] border border-[var(--rule-hair)] rounded-lg px-4 py-2 text-[var(--ink)]"
               />
             </div>
+            </>
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <button
@@ -205,12 +233,16 @@ export default function ShippingAddressSection({ order, onOrderUpdated }) {
               disabled={savingAddress}
               className="px-4 py-2 bg-[var(--orange)] hover:bg-[var(--orange-press)] text-white rounded-lg disabled:opacity-50"
             >
-              {savingAddress ? "Saving..." : "Save Address"}
+              {savingAddress ? "Saving..." : "Save"}
             </button>
           </div>
         </div>
       ) : (
         <div className="space-y-4">
+          <div>
+            <div className="text-sm text-[var(--ink-3)]">Delivery Method</div>
+            <div className="text-[var(--ink)] font-medium">{deliveryMethodLabel(order)}</div>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="text-sm text-[var(--ink-3)]">Shipping Charge</div>
@@ -225,7 +257,11 @@ export default function ShippingAddressSection({ order, onOrderUpdated }) {
               </div>
             </div>
           </div>
-          {order.shipping_address_line1 ? (
+          {isPickup ? (
+            <div className="text-[var(--ink-3)]">
+              The customer picks up the order. No address or carrier needed.
+            </div>
+          ) : order.shipping_address_line1 ? (
             <div className="text-[var(--ink)]">
               <div>{order.shipping_address_line1}</div>
               {order.shipping_address_line2 && (
@@ -238,6 +274,10 @@ export default function ShippingAddressSection({ order, onOrderUpdated }) {
               <div className="text-[var(--ink-3)]">
                 {order.shipping_country || "USA"}
               </div>
+            </div>
+          ) : !needsShipping(order) ? (
+            <div className="text-[var(--ink-3)]">
+              No delivery address (optional for hand delivery).
             </div>
           ) : (
             <div className="text-[var(--status-amber)] flex items-center gap-2">

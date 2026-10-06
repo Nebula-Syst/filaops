@@ -109,6 +109,9 @@ class SalesOrder(Base):
     customer_email = Column(String(255), nullable=True)
     customer_phone = Column(String(30), nullable=True)
 
+    # PrintFlow: ship | local_delivery | pickup (app/core/nebula_delivery.py)
+    delivery_method = Column(String(20), nullable=False, default="ship", server_default="ship")
+
     # Shipping Information
     shipping_address_line1 = Column(String(255), nullable=True)
     shipping_address_line2 = Column(String(255), nullable=True)
