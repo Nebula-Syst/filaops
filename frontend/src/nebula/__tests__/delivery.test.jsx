@@ -75,4 +75,18 @@ describe('OrderWorkflowPanel — paso de entrega', () => {
     renderPanel({ status: 'ready_to_ship', delivery_method: 'ship' })
     expect(screen.getByRole('button', { name: 'Ship Order' })).toBeInTheDocument()
   })
+
+  it('envío: ofrece cerrarlo como recogido o entregado en mano sin enviarlo', () => {
+    const onDeliver = renderPanel({ status: 'ready_to_ship', delivery_method: 'ship' })
+    expect(screen.getByText('Not shipping?')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Picked up by customer' }))
+    expect(onDeliver).toHaveBeenCalledWith('pickup')
+    fireEvent.click(screen.getByRole('button', { name: 'Delivered in person' }))
+    expect(onDeliver).toHaveBeenCalledWith('local_delivery')
+  })
+
+  it('recogida: no repite las opciones alternativas', () => {
+    renderPanel({ status: 'ready_to_ship', delivery_method: 'pickup' })
+    expect(screen.queryByText('Not shipping?')).not.toBeInTheDocument()
+  })
 })

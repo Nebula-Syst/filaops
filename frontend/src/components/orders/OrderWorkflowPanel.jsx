@@ -320,6 +320,23 @@ export default function OrderWorkflowPanel({
             (ships
               ? "Production is complete and materials are clear."
               : "Production is complete. No carrier or tracking number needed."),
+        // PrintFlow: un pedido marcado "envío" que al final se recoge o se
+        // entrega en mano se cierra desde aquí, sin pasar por Envíos
+        secondaryActions:
+          canShipOrder() && ships
+            ? [
+                {
+                  label: "Picked up by customer",
+                  onClick: () => onDeliverOrder("pickup"),
+                  disabled: deliveringOrder,
+                },
+                {
+                  label: "Delivered in person",
+                  onClick: () => onDeliverOrder("local_delivery"),
+                  disabled: deliveringOrder,
+                },
+              ]
+            : null,
         action: canShipOrder()
           ? ships
             ? {
@@ -328,7 +345,7 @@ export default function OrderWorkflowPanel({
               }
             : {
                 label: deliveringOrder ? "Saving..." : deliverActionLabel(order),
-                onClick: onDeliverOrder,
+                onClick: () => onDeliverOrder(),
                 disabled: deliveringOrder,
               }
           : null,
@@ -393,6 +410,21 @@ export default function OrderWorkflowPanel({
                   >
                     {step.action.label}
                   </button>
+                )}
+                {step.secondaryActions && (
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm">
+                    <span className="text-[var(--ink-3)]">Not shipping?</span>
+                    {step.secondaryActions.map((secondary) => (
+                      <button
+                        key={secondary.label}
+                        onClick={secondary.onClick}
+                        disabled={secondary.disabled}
+                        className="text-[var(--orange)] underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {secondary.label}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             );

@@ -674,9 +674,26 @@ export default function OrderDetail() {
 
   // PrintFlow: entrega en mano / recogida — sin transportista ni etiqueta.
   // Mismo POST /ship que un envío (descuenta inventario y registra el coste).
-  const handleDeliverOrder = async () => {
+  // Con `method` (desde un pedido "envío"), primero cambia el método de entrega.
+  const handleDeliverOrder = async (method) => {
+    const changing = method && method !== (order.delivery_method || "ship");
+    if (
+      changing &&
+      !confirm(
+        method === "pickup"
+          ? "Mark this order as picked up by the customer? Stock will be deducted and the order closed as delivered."
+          : "Mark this order as delivered in person? Stock will be deducted and the order closed as delivered."
+      )
+    ) {
+      return;
+    }
     setDeliveringOrder(true);
     try {
+      if (changing) {
+        await api.patch(`/api/v1/sales-orders/${orderId}/address`, {
+          delivery_method: method,
+        });
+      }
       await api.post(`/api/v1/sales-orders/${orderId}/ship`, { carrier: null });
       toast.success(`Order ${order.order_number} delivered`);
       await Promise.allSettled([fetchOrder(), refetchFulfillment()]);
