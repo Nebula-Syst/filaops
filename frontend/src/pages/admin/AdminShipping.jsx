@@ -5,6 +5,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { useApi } from "../../hooks/useApi";
 import { useToast } from "../../components/Toast";
 import { API_URL } from "../../config/api";
+import { deliverActionLabel, deliveryMethodLabel, needsShipping } from "../../nebula/delivery";
 
 /**
  * Shipping volume and value over the selected period.
@@ -576,6 +577,29 @@ export default function AdminShipping() {
     }
   };
 
+  // PrintFlow: entrega en mano / recogida — sin transportista ni seguimiento.
+  // Mismo POST /ship (descuenta inventario y registra el coste); el backend
+  // deja el pedido directamente en "delivered".
+  const handleDeliver = async (orderId) => {
+    const preflight = canShip[orderId] ?? canShip[String(orderId)];
+    if (preflight && !preflight.can_ship) {
+      toast.error(preflight.reasons?.[0] || "Order is not ready to deliver");
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.post(`/api/v1/sales-orders/${orderId}/ship`, { carrier: null });
+      toast.success("Order marked as delivered");
+      fetchOrders();
+      setExpandedOrder(null);
+      if (orderIdParam) navigate("/admin/shipping");
+    } catch (err) {
+      toast.error(`Failed: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handlePackingSlip = (orderId) => {
     window.open(`${API_URL}/api/v1/sales-orders/${orderId}/packing-slip/pdf`, "_blank");
   };
@@ -798,7 +822,9 @@ export default function AdminShipping() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-[var(--ink-3)]">
-                      {hasShippingAddress(order) ? (
+                      {!needsShipping(order) ? (
+                        <span>{deliveryMethodLabel(order)}</span>
+                      ) : hasShippingAddress(order) ? (
                         formatAddressShort(order)
                       ) : (
                         <span className="text-[var(--status-red)]">No address</span>
@@ -820,7 +846,13 @@ export default function AdminShipping() {
                         </span>
                       )}
                       {activeTab === "needs_label" && (
-                        <span className="text-[var(--status-amber)] text-xs">Ready to label</span>
+                        <span className="text-[var(--status-amber)] text-xs">
+                          {needsShipping(order)
+                            ? "Ready to label"
+                            : order.delivery_method === "pickup"
+                            ? "Ready for pickup"
+                            : "Ready to deliver"}
+                        </span>
                       )}
                       {activeTab === "ready_to_ship" && order.tracking_number && (
                         <div>
@@ -858,12 +890,22 @@ export default function AdminShipping() {
                             >
                               Packing Slip
                             </button>
+                            {needsShipping(order) ? (
                             <button
                               onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
                               className="px-3 py-1 bg-[var(--orange)] text-white rounded text-xs hover:bg-[var(--orange-press)]"
                             >
                               {isExpanded ? "Cancel" : "Add Label"}
                             </button>
+                            ) : (
+                            <button
+                              onClick={() => handleDeliver(order.id)}
+                              disabled={saving}
+                              className="px-3 py-1 bg-[var(--orange)] text-white rounded text-xs hover:bg-[var(--orange-press)] disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {saving ? "..." : deliverActionLabel(order)}
+                            </button>
+                            )}
                           </>
                         )}
                         {activeTab === "ready_to_ship" && (

@@ -1,3 +1,6 @@
+import DeliveryMethodSelect from "../../nebula/DeliveryMethodSelect";
+import { needsShipping } from "../../nebula/delivery";
+
 /**
  * CustomerSelectionStep - Step 1 of the Sales Order Wizard.
  * Customer selection dropdown, customer info display, shipping address form, and order notes.
@@ -76,8 +79,24 @@ export default function CustomerSelectionStep({
       )}
 
       <div className="space-y-4">
+        {/* PrintFlow: envío, entrega en mano o recogida */}
+        <div className="space-y-2">
+          <h4 className="text-md font-medium text-white">
+            Delivery Method
+          </h4>
+          <DeliveryMethodSelect
+            value={orderData.delivery_method}
+            onChange={(delivery_method) =>
+              setOrderData({ ...orderData, delivery_method })
+            }
+          />
+        </div>
+        {orderData.delivery_method !== "pickup" && (
+        <>
         <h4 className="text-md font-medium text-white">
-          Shipping Address
+          {needsShipping(orderData.delivery_method)
+            ? "Shipping Address"
+            : "Delivery Address (optional)"}
         </h4>
         <div>
           <label className="block text-sm text-gray-400 mb-1">
@@ -146,6 +165,8 @@ export default function CustomerSelectionStep({
             />
           </div>
         </div>
+        </>
+        )}
         <div>
           <label className="block text-sm text-gray-400 mb-1">
             Order Notes

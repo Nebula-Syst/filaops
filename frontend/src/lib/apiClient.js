@@ -47,7 +47,7 @@ export class ApiError extends Error {
 export function createApiClient(/** @type {ApiConfig} */ cfg) {
   const base = cfg.baseUrl.replace(/\/+$/, "");
 
-  /** @param {RequestInit & {json?: any, retry?: number}} init */
+  /** @param {RequestInit & {json?: any, retry?: number, quietStatuses?: number[]}} init */
   async function doFetch(
     path,
     init = /** @type {RequestInit & {json?:any,retry?:number}} */ ({})
@@ -123,9 +123,11 @@ export function createApiClient(/** @type {ApiConfig} */ cfg) {
         (payload && typeof payload === "object" ? payload.message : undefined) ||
         `HTTP ${res.status}`;
       const err = new ApiError(message, res.status, payload);
-      // why: notify app-wide error listeners
+      // why: notify app-wide error listeners — unless the caller expects this
+      // status (e.g. an optional lookup that 404s when there is nothing to find)
+      const quiet = (init.quietStatuses || []).includes(res.status);
       try {
-        emit("api:error", {
+        if (!quiet) emit("api:error", {
           url,
           method: init.method || "GET",
           status: res.status,

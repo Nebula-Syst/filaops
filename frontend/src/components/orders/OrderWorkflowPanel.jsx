@@ -20,6 +20,7 @@ import {
   SHIPPED_ORDER_STATUSES,
   UNCONFIRMED_ORDER_STATUSES,
 } from "./orderWorkflowUtils";
+import { deliverActionLabel, needsShipping } from "../../nebula/delivery";
 
 /**
  * The step ladder on an order: quote -> confirm -> produce -> ship -> invoice,
@@ -45,6 +46,8 @@ export default function OrderWorkflowPanel({
   getProductionComplete,
   getProductionReleaseBlockReason,
   onConfirmOrder,
+  onDeliverOrder,
+  deliveringOrder,
   onCreateProductionOrder,
   onGenerateInvoice,
   onDownloadInvoice,
@@ -167,6 +170,9 @@ export default function OrderWorkflowPanel({
     const noProductionNeeded = !hasOrderProduct();
     const releaseBlockReason = getProductionReleaseBlockReason();
     const shipBlockReason = getShipBlockReason();
+    // PrintFlow: entrega en mano / recogida se cierran aquí mismo, sin pasar
+    // por la pantalla de envíos (no hay transportista ni etiqueta)
+    const ships = needsShipping(order);
 
     // PrintFlow: pagado = pedido marcado como pagado, algún pago registrado o
     // factura cobrada. Hasta entonces la factura siempre se puede descargar.
@@ -298,18 +304,50 @@ export default function OrderWorkflowPanel({
           : shipped
           ? status.replace(/_/g, " ")
           : productionComplete
-          ? "Ready to ship"
+          ? ships
+            ? "Ready to ship"
+            : order?.delivery_method === "pickup"
+            ? "Ready for pickup"
+            : "Ready to deliver"
           : "Waiting",
         detail: legacyMismatch
           ? `Order status says ${status.replace(/_/g, " ")}, but no shipment was recorded.`
           : shipped
-          ? "Shipment is already in progress or complete."
-          : shipBlockReason || "Production is complete and materials are clear.",
+          ? ships
+            ? "Shipment is already in progress or complete."
+            : "The order has been handed over to the customer."
+          : shipBlockReason ||
+            (ships
+              ? "Production is complete and materials are clear."
+              : "Production is complete. No carrier or tracking number needed."),
+        // PrintFlow: un pedido marcado "envío" que al final se recoge o se
+        // entrega en mano se cierra desde aquí, sin pasar por Envíos
+        secondaryActions:
+          canShipOrder() && ships
+            ? [
+                {
+                  label: "Picked up by customer",
+                  onClick: () => onDeliverOrder("pickup"),
+                  disabled: deliveringOrder,
+                },
+                {
+                  label: "Delivered in person",
+                  onClick: () => onDeliverOrder("local_delivery"),
+                  disabled: deliveringOrder,
+                },
+              ]
+            : null,
         action: canShipOrder()
-          ? {
-              label: "Ship Order",
-              onClick: () => navigate(`/admin/shipping?orderId=${order.id}`),
-            }
+          ? ships
+            ? {
+                label: "Ship Order",
+                onClick: () => navigate(`/admin/shipping?orderId=${order.id}`),
+              }
+            : {
+                label: deliveringOrder ? "Saving..." : deliverActionLabel(order),
+                onClick: () => onDeliverOrder(),
+                disabled: deliveringOrder,
+              }
           : null,
       },
     ];
@@ -372,6 +410,21 @@ export default function OrderWorkflowPanel({
                   >
                     {step.action.label}
                   </button>
+                )}
+                {step.secondaryActions && (
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm">
+                    <span className="text-[var(--ink-3)]">Not shipping?</span>
+                    {step.secondaryActions.map((secondary) => (
+                      <button
+                        key={secondary.label}
+                        onClick={secondary.onClick}
+                        disabled={secondary.disabled}
+                        className="text-[var(--orange)] underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {secondary.label}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             );

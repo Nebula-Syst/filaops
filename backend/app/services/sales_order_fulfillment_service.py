@@ -11,6 +11,7 @@ from typing import Optional
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.nebula_delivery import DELIVERY_EVENT_TITLES, requires_shipping
 from app.logging_config import get_logger
 from app.models.sales_order import SalesOrder
 from app.models.inventory import InventoryTransaction
@@ -308,8 +309,11 @@ def ship_order(
     # Re-load with lines (identity map returns the same locked row).
     order = get_sales_order_with_lines(db, order_id)
 
+    # PrintFlow: entrega en mano / recogida no necesitan dirección ni transportista
+    ships = requires_shipping(order.delivery_method)
+
     # Validate shipping address
-    if not order.shipping_address_line1 or not order.shipping_city:
+    if ships and (not order.shipping_address_line1 or not order.shipping_city):
         raise HTTPException(
             status_code=400,
             detail="Order has no shipping address. Please add one first."
@@ -344,6 +348,9 @@ def ship_order(
                     f"release the allocation before shipping."
                 ),
             )
+
+    if not ships:
+        return _deliver_without_shipping(db, order, user_id, user_email)
 
     # Generate tracking number if not provided
     if not tracking_number:
@@ -429,6 +436,75 @@ def ship_order(
     }
 
 
+def _deliver_without_shipping(
+    db: Session,
+    order: "SalesOrder",
+    user_id: Optional[int],
+    user_email: Optional[str],
+) -> dict:
+    """PrintFlow: cierra la salida de un pedido entregado en mano o recogido.
+
+    Llamada desde ship_order() con el pedido ya bloqueado y validado (estado,
+    líneas y stock). Mueve el inventario y registra el coste exactamente igual
+    que un envío, pero sin transportista ni número de seguimiento, y el pedido
+    pasa directamente a "delivered".
+    """
+    from app.services.inventory_service import process_shipment
+
+    method = order.delivery_method
+    now = datetime.now(timezone.utc)
+    order.tracking_number = None
+    order.carrier = None
+    order.shipped_at = now
+    order.delivered_at = now
+    order.status = "delivered"
+    order.fulfillment_status = "delivered"
+    order.updated_at = now
+
+    packaging_txns, issue_pairs = process_shipment(
+        db=db,
+        sales_order=order,
+        created_by=user_email,
+    )
+    for line, txn in issue_pairs:
+        if line is not None and not txn.requires_approval:
+            line.shipped_quantity = Decimal(str(line.quantity))
+
+    issue_txns = [txn for _, txn in issue_pairs]
+    _create_shipment_gl_entry(db, order, user_id, [*packaging_txns, *issue_txns])
+
+    record_order_event(
+        db=db,
+        order_id=order.id,
+        event_type="delivered",
+        title=DELIVERY_EVENT_TITLES.get(method, "Order delivered"),
+        user_id=user_id,
+    )
+
+    try:
+        from app.services.mrp_trigger_service import trigger_mrp_recalculation
+        from app.core.settings import get_settings
+
+        if get_settings().AUTO_MRP_ON_SHIPMENT:
+            trigger_mrp_recalculation(db, order.id, reason="shipment")
+    except Exception as e:
+        logger.warning(
+            f"MRP recalculation trigger failed after delivering order {order.id}: {str(e)}",
+            exc_info=True
+        )
+
+    return {
+        "message": "Order delivered",
+        "delivery_method": method,
+        "tracking_number": None,
+        "carrier": None,
+        "service": None,
+        "shipped_at": order.shipped_at.isoformat(),
+        "delivered_at": order.delivered_at.isoformat(),
+        "label_url": None,
+    }
+
+
 def can_ship_reasons(
     db: Session,
     order: "SalesOrder",
@@ -472,7 +548,9 @@ def can_ship_reasons(
         # Every other check assumes a shippable order; nothing else is actionable yet.
         return {"can_ship": False, "reasons": reasons}
 
-    if not order.shipping_address_line1 or not order.shipping_city:
+    if requires_shipping(order.delivery_method) and (
+        not order.shipping_address_line1 or not order.shipping_city
+    ):
         reasons.append("Order has no shipping address.")
 
     if _has_material_backed_lines(order):

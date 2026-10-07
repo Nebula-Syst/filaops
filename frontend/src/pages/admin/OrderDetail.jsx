@@ -147,6 +147,7 @@ export default function OrderDetail() {
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [downloadingInvoice, setDownloadingInvoice] = useState(false);
   const [creatingProduction, setCreatingProduction] = useState(false);
+  const [deliveringOrder, setDeliveringOrder] = useState(false); // PrintFlow
 
   const isBillingReleaseSatisfied = () => {
     const invoiceStatus = orderInvoice?.status || "";
@@ -323,8 +324,10 @@ export default function OrderDetail() {
 
       // Get routing for capacity requirements (optional)
       try {
+        // 404 = el producto no tiene ruta: es opcional, sin aviso de error
         const routing = await api.get(
-          `/api/v1/routings/product/${productId}`
+          `/api/v1/routings/product/${productId}`,
+          { quietStatuses: [404] }
         );
 
         if (routing.operations && routing.operations.length > 0) {
@@ -671,6 +674,38 @@ export default function OrderDetail() {
     }
   };
 
+  // PrintFlow: entrega en mano / recogida — sin transportista ni etiqueta.
+  // Mismo POST /ship que un envío (descuenta inventario y registra el coste).
+  // Con `method` (desde un pedido "envío"), primero cambia el método de entrega.
+  const handleDeliverOrder = async (method) => {
+    const changing = method && method !== (order.delivery_method || "ship");
+    if (
+      changing &&
+      !confirm(
+        method === "pickup"
+          ? "Mark this order as picked up by the customer? Stock will be deducted and the order closed as delivered."
+          : "Mark this order as delivered in person? Stock will be deducted and the order closed as delivered."
+      )
+    ) {
+      return;
+    }
+    setDeliveringOrder(true);
+    try {
+      if (changing) {
+        await api.patch(`/api/v1/sales-orders/${orderId}/address`, {
+          delivery_method: method,
+        });
+      }
+      await api.post(`/api/v1/sales-orders/${orderId}/ship`, { carrier: null });
+      toast.success(`Order ${order.order_number} delivered`);
+      await Promise.allSettled([fetchOrder(), refetchFulfillment()]);
+    } catch (err) {
+      toast.error(err.message || "Failed to mark the order as delivered");
+    } finally {
+      setDeliveringOrder(false);
+    }
+  };
+
   const handleAcceptShortPO = async (po) => {
     if (!confirm(`Accept short on ${po.code || `WO-${po.id}`}? This will complete it with ${po.quantity_completed}/${po.quantity_ordered} units.`)) return;
     try {
@@ -877,6 +912,8 @@ export default function OrderDetail() {
         getProductionComplete={getProductionComplete}
         getProductionReleaseBlockReason={getProductionReleaseBlockReason}
         onConfirmOrder={handleConfirmOrder}
+        onDeliverOrder={handleDeliverOrder}
+        deliveringOrder={deliveringOrder}
         onCreateProductionOrder={handleCreateProductionOrder}
         onGenerateInvoice={handleGenerateInvoice}
         onDownloadInvoice={handleDownloadOrderInvoice}

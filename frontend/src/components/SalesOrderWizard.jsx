@@ -5,6 +5,7 @@ import { validateRequired, validateQuantity } from "../utils/validation";
 import CustomerSelectionStep from "./sales-order/CustomerSelectionStep";
 import ProductSelectionStep from "./sales-order/ProductSelectionStep";
 import ReviewStep from "./sales-order/ReviewStep";
+import { needsShipping } from "../nebula/delivery";
 
 // Item type options
 const ITEM_TYPES = [
@@ -82,6 +83,7 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
   // Order form state
   const [orderData, setOrderData] = useState({
     customer_id: null,
+    delivery_method: "ship",
     shipping_address_line1: "",
     shipping_city: "",
     shipping_state: "",
@@ -171,6 +173,7 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
           pendingCustomerId = data.newCustomerId || data.customer_id || null;
           setOrderData({
             customer_id: pendingCustomerId,
+            delivery_method: data.delivery_method || "ship",
             shipping_address_line1: data.shipping_address_line1 || "",
             shipping_city: data.shipping_city || "",
             shipping_state: data.shipping_state || "",
@@ -679,6 +682,7 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
       "pendingOrderData",
       JSON.stringify({
         customer_id: orderData.customer_id,
+        delivery_method: orderData.delivery_method,
         shipping_address_line1: orderData.shipping_address_line1,
         shipping_city: orderData.shipping_city,
         shipping_state: orderData.shipping_state,
@@ -1065,6 +1069,8 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
 
     try {
       const parsedShippingCost = parseFloat(orderData.shipping_cost);
+      // PrintFlow: en recogida no hay dirección ni cargo de envío
+      const isPickup = orderData.delivery_method === "pickup";
       const payload = {
         customer_id: orderData.customer_id || null,
         lines: lineItems.map((li) => {
@@ -1092,11 +1098,13 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
           };
         }),
         source: "manual",
-        shipping_address_line1: orderData.shipping_address_line1 || null,
-        shipping_city: orderData.shipping_city || null,
-        shipping_state: orderData.shipping_state || null,
-        shipping_zip: orderData.shipping_zip || null,
-        shipping_cost: Number.isNaN(parsedShippingCost) ? 0 : parsedShippingCost,
+        delivery_method: orderData.delivery_method || "ship",
+        shipping_address_line1: isPickup ? null : orderData.shipping_address_line1 || null,
+        shipping_city: isPickup ? null : orderData.shipping_city || null,
+        shipping_state: isPickup ? null : orderData.shipping_state || null,
+        shipping_zip: isPickup ? null : orderData.shipping_zip || null,
+        shipping_cost:
+          isPickup || Number.isNaN(parsedShippingCost) ? 0 : parsedShippingCost,
         customer_notes: orderData.customer_notes || null,
       };
 
@@ -1129,6 +1137,7 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
     setCurrentStep(1);
     setOrderData({
       customer_id: null,
+      delivery_method: "ship",
       shipping_address_line1: "",
       shipping_city: "",
       shipping_state: "",
@@ -1258,6 +1267,7 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
                     "pendingOrderData",
                     JSON.stringify({
                       customer_id: orderData.customer_id,
+                      delivery_method: orderData.delivery_method,
                       shipping_address_line1: orderData.shipping_address_line1,
                       shipping_city: orderData.shipping_city,
                       shipping_state: orderData.shipping_state,
@@ -1271,9 +1281,10 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
                   navigate("/admin/customers?action=new&returnTo=order");
                 }}
               />
+              {orderData.delivery_method !== "pickup" && (
               <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
                 <h4 className="text-md font-medium text-white mb-3">
-                  Shipping Charge
+                  {needsShipping(orderData.delivery_method) ? "Shipping Charge" : "Delivery Charge"}
                 </h4>
                 <label className="block text-sm text-gray-400 mb-1">
                   Shipping Cost
@@ -1296,6 +1307,7 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
                   />
                 </div>
               </div>
+              )}
             </div>
           )}
 
