@@ -324,8 +324,10 @@ export default function OrderDetail() {
 
       // Get routing for capacity requirements (optional)
       try {
+        // 404 = el producto no tiene ruta: es opcional, sin aviso de error
         const routing = await api.get(
-          `/api/v1/routings/product/${productId}`
+          `/api/v1/routings/product/${productId}`,
+          { quietStatuses: [404] }
         );
 
         if (routing.operations && routing.operations.length > 0) {

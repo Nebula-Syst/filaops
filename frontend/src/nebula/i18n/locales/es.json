@@ -2231,6 +2231,8 @@
   "Order deleted": "Pedido eliminado",
   "Order delivered": "Pedido entregado",
   "Order delivered in person": "Pedido entregado en mano",
+  "Order has no shipping address.": "El pedido no tiene dirección de envío.",
+  "Order has no shipping address. Please add one first.": "El pedido no tiene dirección de envío. Añade una primero.",
   "Order is": "El pedido está",
   "Order is not ready to deliver": "El pedido no está listo para entregar",
   "Order is not ready to ship": "El pedido no está listo para enviar",
@@ -5118,6 +5120,18 @@
   [
    "Order {0} delivered",
    "Pedido {0} entregado"
+  ],
+  [
+   "Insufficient inventory for product {0}.",
+   "No hay stock suficiente del producto {0}."
+  ],
+  [
+   "Insufficient inventory (need {0} more)",
+   "Stock insuficiente (faltan {0})"
+  ],
+  [
+   "Order is {0}; it must be 'ready_to_ship' to ship.",
+   "El pedido está en {0}; tiene que estar listo para enviar."
   ]
  ],
  "ignored": [

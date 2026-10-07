@@ -46,10 +46,18 @@ def get_fulfillment_status(db: Session, order_id: int) -> Optional[FulfillmentSt
     lines_ready = 0
     lines_blocked = 0
 
+    # PrintFlow: orders whose work orders finished before line allocation
+    # counted order-level work orders still show as ready (read-only here).
+    from app.services.status_sync_service import compute_production_allocations
+    production_allocations = compute_production_allocations(db, order.id, order.lines)
+
     for idx, line in enumerate(order.lines, start=1):
         # Get quantities from the line
         quantity_ordered = float(line.quantity or 0)
-        allocated = float(line.allocated_quantity or 0)
+        allocated = max(
+            float(line.allocated_quantity or 0),
+            float(production_allocations.get(line.id, 0)),
+        )
         shipped = float(line.shipped_quantity or 0)
         remaining = quantity_ordered - shipped
         product_id, product_sku, product_name = _line_product_identity(line)

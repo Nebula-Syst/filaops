@@ -19,6 +19,57 @@ from app.logging_config import get_logger
 logger = get_logger(__name__)
 
 
+_COMPLETED_PO_STATUSES = ("complete", "completed", "closed")
+
+
+def compute_production_allocations(
+    db: Session, sales_order_id: int, lines: list
+) -> dict:
+    """Completed production quantity per sales order line: {line_id: Decimal}.
+
+    Work orders linked to a line count for that line. Work orders linked only to
+    the order (sales_order_line_id NULL) count for the order's lines with the
+    same product, in line order and capped at each line's quantity. Only lines
+    that some completed work order feeds appear in the result.
+    """
+    completed_pos = db.query(
+        ProductionOrder.sales_order_line_id,
+        ProductionOrder.product_id,
+        func.coalesce(func.sum(ProductionOrder.quantity_completed), 0),
+    ).filter(
+        ProductionOrder.sales_order_id == sales_order_id,
+        ProductionOrder.status.in_(_COMPLETED_PO_STATUSES),
+    ).group_by(
+        ProductionOrder.sales_order_line_id, ProductionOrder.product_id
+    ).all()
+
+    by_line: dict = {}
+    unlinked_by_product: dict = {}
+    for line_id, product_id, qty in completed_pos:
+        qty = Decimal(str(qty or 0))
+        if line_id is not None:
+            by_line[line_id] = by_line.get(line_id, Decimal("0")) + qty
+        elif product_id is not None:
+            unlinked_by_product[product_id] = (
+                unlinked_by_product.get(product_id, Decimal("0")) + qty
+            )
+
+    allocations: dict = {}
+    for line in sorted(lines, key=lambda ln: ln.id):
+        allocated = by_line.get(line.id)
+        pool = unlinked_by_product.get(line.product_id) if line.product_id else None
+        if allocated is None and not pool:
+            continue
+        allocated = allocated or Decimal("0")
+        if pool:
+            room = max(Decimal("0"), Decimal(str(line.quantity or 0)) - allocated)
+            take = min(room, pool)
+            allocated += take
+            unlinked_by_product[line.product_id] = pool - take
+        allocations[line.id] = allocated
+    return allocations
+
+
 def sync_on_production_complete(db: Session, production_order: ProductionOrder) -> bool:
     """
     Called when a production order is completed.
@@ -48,31 +99,27 @@ def sync_on_production_complete(db: Session, production_order: ProductionOrder) 
 
     updated = False
 
-    # Update allocated_quantity on the linked sales order line (if any)
-    # This reflects that production has created inventory ready to ship
-    if production_order.sales_order_line_id:
-        line = db.query(SalesOrderLine).filter(
-            SalesOrderLine.id == production_order.sales_order_line_id
-        ).first()
-        if line:
-            # Sum all completed quantities from production orders for this line
-            completed_qty = db.query(
-                func.coalesce(func.sum(ProductionOrder.quantity_completed), 0)
-            ).filter(
-                ProductionOrder.sales_order_line_id == line.id,
-                ProductionOrder.status.in_(["complete", "completed", "closed"])
-            ).scalar()
-
-            old_allocated = float(line.allocated_quantity or 0)
-            new_allocated = float(completed_qty or 0)
-
-            if new_allocated != old_allocated:
-                line.allocated_quantity = Decimal(str(new_allocated))
-                logger.info(
-                    f"Updated SO line {line.id} allocated_quantity: {old_allocated} -> {new_allocated} "
-                    f"(from production order {production_order.code})"
-                )
-                updated = True
+    # Update allocated_quantity on the sales order lines this production fed.
+    # This reflects that production has created inventory ready to ship.
+    # PrintFlow: also counts work orders linked only to the order (no
+    # sales_order_line_id), matched to the line by product — before, those left
+    # the line at 0 ("Short 1") even though the order moved to ready_to_ship.
+    lines = db.query(SalesOrderLine).filter(
+        SalesOrderLine.sales_order_id == sales_order.id
+    ).all()
+    allocations = compute_production_allocations(db, sales_order.id, lines)
+    for line in lines:
+        if line.id not in allocations:
+            continue
+        old_allocated = Decimal(str(line.allocated_quantity or 0))
+        new_allocated = allocations[line.id]
+        if new_allocated != old_allocated:
+            line.allocated_quantity = new_allocated
+            logger.info(
+                f"Updated SO line {line.id} allocated_quantity: {old_allocated} -> {new_allocated} "
+                f"(from production order {production_order.code})"
+            )
+            updated = True
 
     # Get all production orders for this sales order
     all_production_orders = db.query(ProductionOrder).filter(
