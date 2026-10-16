@@ -37,11 +37,12 @@ export default function useActivityTokenRefresh() {
     isRefreshingRef.current = true;
 
     try {
+      // Nebula (fork): sin cuerpo, como apiClient. Con body "{}" el backend lo
+      // valida como RefreshTokenRequest, falta refresh_token → 422, y la sesión
+      // caducaba a los 30 min aunque se estuviera trabajando.
       const response = await fetch(`${API_URL}/api/v1/auth/refresh`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
       });
 
       if (!response.ok) {
@@ -84,8 +85,23 @@ export default function useActivityTokenRefresh() {
 
     // Throttle activity updates to avoid excessive calls
     let activityTimeout = null;
+    // Nebula (fork): al volver tras un rato parado (móvil bloqueado, app en
+    // segundo plano) se renueva ya, antes de que fallen las peticiones.
+    const refreshIfStale = () => {
+      if (!localStorage.getItem("adminUser")) return;
+      if (Date.now() - lastActivityRef.current > REFRESH_INTERVAL) refreshToken();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        refreshIfStale();
+        updateActivity();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     const throttledActivity = () => {
       if (!activityTimeout) {
+        refreshIfStale();
         updateActivity();
         activityTimeout = setTimeout(() => {
           activityTimeout = null;
@@ -106,8 +122,9 @@ export default function useActivityTokenRefresh() {
       events.forEach(event => {
         window.removeEventListener(event, throttledActivity);
       });
+      document.removeEventListener("visibilitychange", onVisible);
       clearInterval(intervalId);
       if (activityTimeout) clearTimeout(activityTimeout);
     };
-  }, [updateActivity, checkAndRefresh]);
+  }, [updateActivity, checkAndRefresh, refreshToken]);
 }
