@@ -30,6 +30,7 @@ import OrderHeaderActions from "../../components/orders/OrderHeaderActions";
 import LegacyFulfillmentBanner from "../../components/orders/LegacyFulfillmentBanner";
 import OrderLineItemsTable from "../../components/orders/OrderLineItemsTable";
 import OrderWorkflowPanel from "../../components/orders/OrderWorkflowPanel";
+import { needsShipping } from "../../nebula/delivery";
 import {
   formatMoney,
   SHIPPED_ORDER_STATUSES,
@@ -1046,7 +1047,13 @@ export default function OrderDetail() {
         error={fulfillmentError}
         onRefresh={refreshFulfillmentPanel}
         canShip={canShip}
-        onShip={() => navigate(`/admin/shipping?orderId=${order.id}`)}
+        // Nebula (fork): con entrega en mano o recogida no se ofrece "enviar"
+        // por transportista; eso se cierra desde el paso Preparación.
+        onShip={
+          needsShipping(order)
+            ? () => navigate(`/admin/shipping?orderId=${order.id}`)
+            : undefined
+        }
         closedShort={order?.closed_short === true}
       />
 
