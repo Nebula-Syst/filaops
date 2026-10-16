@@ -37,11 +37,12 @@ export default function useActivityTokenRefresh() {
     isRefreshingRef.current = true;
 
     try {
+      // Nebula (fork): sin cuerpo, como apiClient. Con body "{}" el backend lo
+      // valida como RefreshTokenRequest, falta refresh_token → 422, y la sesión
+      // caducaba a los 30 min aunque se estuviera trabajando.
       const response = await fetch(`${API_URL}/api/v1/auth/refresh`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
       });
 
       if (!response.ok) {
