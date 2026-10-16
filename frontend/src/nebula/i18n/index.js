@@ -72,6 +72,8 @@ function compile(dictionary) {
     const literalLength = parts.join("").trim().length;
     return { prefix: parts[0], suffix: parts[parts.length - 1], regex, order, out, literalLength };
   });
+  // El más específico primero: "Created {0} work order(s)" antes que "{0} work order(s)"
+  patterns.sort((a, b) => b.literalLength - a.literalLength);
   return { texts, patterns };
 }
 
