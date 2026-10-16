@@ -85,8 +85,23 @@ export default function useActivityTokenRefresh() {
 
     // Throttle activity updates to avoid excessive calls
     let activityTimeout = null;
+    // Nebula (fork): al volver tras un rato parado (móvil bloqueado, app en
+    // segundo plano) se renueva ya, antes de que fallen las peticiones.
+    const refreshIfStale = () => {
+      if (!localStorage.getItem("adminUser")) return;
+      if (Date.now() - lastActivityRef.current > REFRESH_INTERVAL) refreshToken();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        refreshIfStale();
+        updateActivity();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     const throttledActivity = () => {
       if (!activityTimeout) {
+        refreshIfStale();
         updateActivity();
         activityTimeout = setTimeout(() => {
           activityTimeout = null;
@@ -107,8 +122,9 @@ export default function useActivityTokenRefresh() {
       events.forEach(event => {
         window.removeEventListener(event, throttledActivity);
       });
+      document.removeEventListener("visibilitychange", onVisible);
       clearInterval(intervalId);
       if (activityTimeout) clearTimeout(activityTimeout);
     };
-  }, [updateActivity, checkAndRefresh]);
+  }, [updateActivity, checkAndRefresh, refreshToken]);
 }
