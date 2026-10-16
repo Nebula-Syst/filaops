@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useApi } from "../../hooks/useApi";
 import { useFormatCurrency } from "../../hooks/useFormatCurrency";
 import ReservationReconciliationReport from "./ReservationReconciliationReport";
+import { parseDateTime } from "../../utils/formatting"; // Nebula: UTC sin "Z" del backend
 
 // ---------------------------------------------------------------------------
 // CountModal — inline count-entry form for a single reconciliation row
@@ -461,7 +462,7 @@ function PendingApprovalsSection() {
                             </td>
                             <td className="py-2.5 px-4 text-gray-400 text-sm">
                               {txn.created_at
-                                ? new Date(txn.created_at).toLocaleString()
+                                ? parseDateTime(txn.created_at).toLocaleString()
                                 : "—"}
                             </td>
                             <td className="py-2.5 px-4 text-gray-400 text-sm">

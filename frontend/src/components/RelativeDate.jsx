@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { parseDateTime } from "../utils/formatting";
 
 /**
  * RelativeDate - Displays dates in human-readable relative format
@@ -17,7 +18,9 @@ const YEAR = 365 * DAY;
 
 function formatRelative(date) {
   const now = new Date();
-  const then = new Date(date);
+  // Nebula (fork): el backend manda UTC sin "Z"; new Date() lo leía como hora
+  // local y en España todo salía "hace 2 horas" recién creado.
+  const then = parseDateTime(date) ?? new Date(NaN);
 
   // Validate date before formatting
   if (isNaN(then.getTime())) {
@@ -75,7 +78,7 @@ function formatRelative(date) {
 }
 
 function formatAbsolute(date, options = {}) {
-  const then = new Date(date);
+  const then = parseDateTime(date) ?? new Date(NaN);
 
   // Validate date before formatting
   if (isNaN(then.getTime())) {
