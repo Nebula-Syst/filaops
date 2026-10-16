@@ -494,6 +494,19 @@ export default function OrderDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
+  // Nebula (fork): el aviso "listo para enviar" (can-ship) se quedaba con el
+  // estado anterior tras Confirmar, crear OT, etc. (decía "el pedido está en
+  // 'pending'" con el pedido ya confirmado). Se recarga cuando cambia el pedido.
+  useEffect(() => {
+    if (!order) return undefined;
+    let cancelled = false;
+    void fetchCanShip({ shouldApply: () => !cancelled });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.status, order?.fulfillment_status, order?.updated_at]);
+
   // SCHED-3b: open the wizard once productionOrders is populated after release
   useEffect(() => {
     if (!wizardPending || productionOrders.length === 0) return;
