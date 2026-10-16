@@ -314,3 +314,83 @@ describe('Onboarding — printer step navigation', () => {
     )
   })
 })
+
+describe('Onboarding — account step errors', () => {
+  it("shows the server's reason instead of 'Setup failed'", async () => {
+    // The response a real 4.2.0 backend gave for an email on a reserved domain.
+    await renderWizard({
+      '/setup/initial-admin': {
+        ok: false,
+        status: 422,
+        json: async () => ({
+          error: 'VALIDATION_ERROR',
+          message: 'Request validation failed',
+          details: {
+            errors: [
+              {
+                field: 'email',
+                message:
+                  'value is not a valid email address: The part after the @-sign is a special-use or reserved name that cannot be used with email.',
+                type: 'value_error',
+              },
+            ],
+          },
+        }),
+      },
+    })
+    await fillAndSubmitAccount()
+
+    expect(
+      await screen.findByText(
+        'Email Address: The part after the @-sign is a special-use or reserved name that cannot be used with email.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Setup failed')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Create Admin Account' })).toBeInTheDocument()
+  })
+
+  it('explains an unreachable server in plain words', async () => {
+    await renderWizard({
+      '/setup/initial-admin': () => Promise.reject(new TypeError('Failed to fetch')),
+    })
+    await fillAndSubmitAccount()
+
+    expect(
+      await screen.findByText(
+        'Cannot reach the FilaOps server. Check that FilaOps is running, then try again.',
+      ),
+    ).toBeInTheDocument()
+  })
+})
+
+describe('Onboarding — customer contact email', () => {
+  const captureInitialAdmin = (bodies) => ({
+    '/setup/initial-admin': (_url, opts) => {
+      bodies.push(JSON.parse(opts.body))
+      return fetchOk({ access_token: 'tok', setup_token: 'tok' })
+    },
+  })
+
+  it('sends the customer contact email when one is entered', async () => {
+    const bodies = []
+    await renderWizard(captureInitialAdmin(bodies))
+
+    fireEvent.change(screen.getByPlaceholderText('support@example.com'), {
+      target: { value: ' help@acmeprint.works ', name: 'company_email' },
+    })
+    await fillAndSubmitAccount()
+
+    expect(bodies).toHaveLength(1)
+    expect(bodies[0].company_email).toBe('help@acmeprint.works')
+  })
+
+  it('leaves it out when blank so the server uses the admin email', async () => {
+    const bodies = []
+    await renderWizard(captureInitialAdmin(bodies))
+
+    await fillAndSubmitAccount()
+
+    expect(bodies).toHaveLength(1)
+    expect('company_email' in bodies[0]).toBe(false)
+  })
+})

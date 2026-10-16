@@ -53,6 +53,12 @@ export default function AdminLogin() {
     checkSetupStatus();
   }, [navigate]);
 
+  // The shop's own logo; GET /settings/company/logo needs no login. The
+  // <img> loads it once and stays hidden until it has loaded, so a shop
+  // without a logo (404) shows only the FilaOps logo and no broken image.
+  const [companyLogoLoaded, setCompanyLogoLoaded] = useState(false);
+  const [companyLogoFailed, setCompanyLogoFailed] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -135,10 +141,22 @@ export default function AdminLogin() {
     // Removed when the shell slice migrates this screen off the Neo palette.
     <div data-theme="dim" className="min-h-screen flex items-center justify-center px-4 grid-pattern" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <div className="w-full max-w-md">
-        {/* PrintFlow Logo */}
+        {/* Logo del taller (si lo ha subido) encima del de PrintFlow */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <div className="flex flex-col items-center gap-4">
+              {!companyLogoFailed && (
+                <div className="logo-container" hidden={!companyLogoLoaded}>
+                  <img
+                    src={`${API_URL}/api/v1/settings/company/logo`}
+                    alt="Company Logo"
+                    className="h-16 w-auto logo-breathe"
+                    onLoad={() => setCompanyLogoLoaded(true)}
+                    onError={() => setCompanyLogoFailed(true)}
+                  />
+                </div>
+              )}
+              {/* PrintFlow Logo */}
               <img
                 src={logoFull}
                 alt="PrintFlow"

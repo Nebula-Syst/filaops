@@ -14,6 +14,17 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_URL } from "../config/api";
+import { errorMessageFromResponse, messageForCaughtError } from "../lib/responseError";
+
+// API field names on the account step -> the labels the form shows, so a
+// server-side validation error names the field the user can see.
+const ACCOUNT_FIELD_LABELS = {
+  email: "Email Address",
+  password: "Password",
+  full_name: "Your Name",
+  company_name: "Company Name",
+  company_email: "Customer Contact Email",
+};
 
 const STEPS = {
   ACCOUNT: 1,
@@ -79,6 +90,7 @@ export default function Onboarding() {
     confirmPassword: "",
     full_name: "",
     company_name: "",
+    company_email: "",
     currency_code: "USD",
     locale: "en-US",
   });
@@ -204,14 +216,16 @@ export default function Onboarding() {
           password: accountData.password,
           full_name: accountData.full_name,
           company_name: accountData.company_name,
+          // Blank: the server uses the admin email above.
+          company_email: accountData.company_email.trim() || undefined,
         }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.detail || "Setup failed");
+        throw new Error(await errorMessageFromResponse(res, "Setup failed", ACCOUNT_FIELD_LABELS));
       }
+
+      const data = await res.json();
 
       // Save short-lived setup token (5 min) for subsequent wizard steps.
       // The full-duration token is in the httpOnly cookie; this one is just
@@ -259,7 +273,7 @@ export default function Onboarding() {
       // Move to next step (example data)
       setCurrentStep(STEPS.EXAMPLE_DATA);
     } catch (err) {
-      setError(err.message);
+      setError(messageForCaughtError(err));
     } finally {
       setSubmittingAccount(false);
     }
@@ -284,16 +298,16 @@ export default function Onboarding() {
         },
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.detail || "Seeding failed");
+        throw new Error(await errorMessageFromResponse(res, "Seeding failed"));
       }
+
+      const data = await res.json();
 
       setSeedResult(data);
       scheduleAdvance(STEPS.PRODUCTS);
     } catch (err) {
-      setError(err.message);
+      setError(messageForCaughtError(err));
     } finally {
       setSeedingData(false);
     }
@@ -319,16 +333,16 @@ export default function Onboarding() {
         body: formData,
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.detail || "Import failed");
+        throw new Error(await errorMessageFromResponse(res, "Import failed"));
       }
+
+      const data = await res.json();
 
       setProductsResult(data);
       scheduleAdvance(STEPS.CUSTOMERS);
     } catch (err) {
-      setError(err.message);
+      setError(messageForCaughtError(err));
     } finally {
       setImportingProducts(false);
     }
@@ -354,16 +368,16 @@ export default function Onboarding() {
         body: formData,
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.detail || "Import failed");
+        throw new Error(await errorMessageFromResponse(res, "Import failed"));
       }
+
+      const data = await res.json();
 
       setCustomersResult(data);
       scheduleAdvance(STEPS.ORDERS);
     } catch (err) {
-      setError(err.message);
+      setError(messageForCaughtError(err));
     } finally {
       setImportingCustomers(false);
     }
@@ -396,14 +410,7 @@ export default function Onboarding() {
       });
 
       if (!res.ok) {
-        let errorMessage = "Import failed";
-        try {
-          const errorData = await res.json();
-          errorMessage = errorData.detail || errorData.message || errorMessage;
-        } catch {
-          errorMessage = `Server error: ${res.status} ${res.statusText}`;
-        }
-        throw new Error(errorMessage);
+        throw new Error(await errorMessageFromResponse(res, "Import failed"));
       }
 
       const data = await res.json();
@@ -411,7 +418,7 @@ export default function Onboarding() {
       setOrdersResult(data);
       scheduleAdvance(STEPS.INVENTORY);
     } catch (err) {
-      setError(err.message);
+      setError(messageForCaughtError(err));
     } finally {
       setImportingOrders(false);
     }
@@ -437,14 +444,7 @@ export default function Onboarding() {
       });
 
       if (!res.ok) {
-        let errorMessage = "Import failed";
-        try {
-          const errorData = await res.json();
-          errorMessage = errorData.detail || errorData.message || errorMessage;
-        } catch {
-          errorMessage = `Server error: ${res.status} ${res.statusText}`;
-        }
-        throw new Error(errorMessage);
+        throw new Error(await errorMessageFromResponse(res, "Import failed"));
       }
 
       const data = await res.json();
@@ -452,7 +452,7 @@ export default function Onboarding() {
       setInventoryResult(data);
       scheduleAdvance(STEPS.PRINTER);
     } catch (err) {
-      setError(err.message);
+      setError(messageForCaughtError(err));
     } finally {
       setImportingInventory(false);
     }
@@ -522,16 +522,16 @@ export default function Onboarding() {
         }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.detail || "Failed to add printer");
+        throw new Error(await errorMessageFromResponse(res, "Failed to add printer"));
       }
+
+      const data = await res.json();
 
       setPrinterResult(data);
       scheduleAdvance(STEPS.COMPLETE);
     } catch (err) {
-      setError(err.message);
+      setError(messageForCaughtError(err));
     } finally {
       setSavingPrinter(false);
     }
@@ -767,6 +767,29 @@ export default function Onboarding() {
                   }}
                   placeholder="Your Print Farm"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1"
+                style={{ color: 'var(--text-secondary)' }}>
+                  Customer Contact Email <span style={{ color: 'var(--text-secondary)' }}>(optional)</span>
+                </label>
+                <input
+                  type="email"
+                  name="company_email"
+                  value={accountData.company_email}
+                  onChange={handleAccountChange}
+                  className="w-full px-3 py-2 rounded-lg focus:outline-none transition-all"
+                  style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-primary)'
+                  }}
+                  placeholder={accountData.email || "support@example.com"}
+                />
+                <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                  Shown to customers in emails as the address to contact. Leave blank to use your email above.
+                </p>
               </div>
 
               {/* Currency & Locale — affects invoices and number formatting */}

@@ -10,6 +10,7 @@ import { currencyOptions, localeOptions } from "../../components/settings/i18nCo
 import { useLocale } from "../../contexts/LocaleContext";
 import LicenseSection from "../../components/LicenseSection";
 import QualitySettingsSection from "../../components/settings/QualitySettingsSection";
+import SerialNumberSettingsSection from "../../components/settings/SerialNumberSettingsSection";
 import { useApp } from "../../contexts/AppContext";
 import LanguageSettings from "../../nebula/i18n/LanguageSettings";
 
@@ -283,8 +284,8 @@ const AdminSettings = () => {
           <div>
             <h3 className="text-sm font-medium text-amber-400">Email (SMTP) Not Configured</h3>
             <p className="text-sm text-amber-400/80 mt-1">
-              Password resets will auto-approve and display the reset link on screen.
-              Configure SMTP_USER and SMTP_PASSWORD in your .env file to enable email-based password resets with admin approval.
+              Forgot-password requests can't be emailed, so they stay pending. To help a team member who is locked out, use Reset PW on the Team Members page. Customer portal accounts can't reset a password until email is set up.
+              Set SMTP_USER, SMTP_PASSWORD and ADMIN_APPROVAL_EMAIL (a real administrator's address, not admin@example.com) in your .env file to enable email-based password resets with admin approval.
             </p>
           </div>
         </div>
@@ -925,6 +926,9 @@ const AdminSettings = () => {
 
         {/* Quality (QC) dial — #784 QMS */}
         <QualitySettingsSection />
+
+        {/* Serial-number prefix (shop-wide) */}
+        <SerialNumberSettingsSection />
 
         {/* AI Configuration moved to /admin/integrations in PR-05.
             Operators with bookmarks/muscle memory pointing here would

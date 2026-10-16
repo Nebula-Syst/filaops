@@ -1,9 +1,11 @@
 """
 Multi-user seat caps for FilaOps Core.
 
-The ``multi_user`` capability is a PRO feature: unlicensed (community) installs
-get a single staff seat, while licensed installs (professional / enterprise) get
-unlimited staff seats.
+Licensed installs (professional / enterprise) get unlimited staff seats.
+Unlicensed (community) installs get ``COMMUNITY_SEAT_CAP`` seats. 4.2.0 set that
+to 1; 4.3.1 lifted it (``None``, unlimited) while PRO is not on sale, so no
+install meets a limit it has no way past. Set it back to a number to restore a
+community cap; the enforcement below and its tests are unchanged.
 
 A *seat* is a STAFF/team user account — ``account_type`` in ``admin`` or
 ``operator``. Customer / portal accounts (``account_type == "customer"``) are NOT
@@ -41,28 +43,36 @@ STAFF_ACCOUNT_TYPES = ("admin", "operator")
 # seat enforcement contends on it.
 _SEAT_LOCK_KEY = 848_293_001
 
+# Active staff seats for an unlicensed install. ``None`` means unlimited.
+# Lifted in 4.3.1 while PRO is not on sale (it was 1 in 4.2.0 and 4.3.0).
+COMMUNITY_SEAT_CAP: Optional[int] = None
+
 # Tier -> maximum concurrent active staff seats.
 # ``None`` means unlimited. Any tier not listed here falls back to the community
 # cap (fail-safe: an unknown/unlicensed tier is treated as community).
 _SEAT_CAPS: dict[str, Optional[int]] = {
-    "community": 1,
+    "community": COMMUNITY_SEAT_CAP,
     "professional": None,  # unlimited
     "enterprise": None,    # unlimited
 }
 
 # Nebula (fork): el límite del plan community se puede cambiar por entorno.
 # NEBULA_COMMUNITY_SEAT_CAP=unlimited (o un número). Sin la variable se mantiene
-# el comportamiento de upstream (1 usuario de staff).
+# el de upstream (desde 4.3.1, ilimitado; antes 1 usuario de staff).
 _nebula_cap = os.getenv("NEBULA_COMMUNITY_SEAT_CAP", "").strip().lower()
 if _nebula_cap:
     _SEAT_CAPS["community"] = (
         None if _nebula_cap in ("unlimited", "none", "0") else int(_nebula_cap)
     )
 
-# Shown to the user when they hit the community seat cap.
-SEAT_LIMIT_MESSAGE = (
-    "Your plan allows 1 user. Upgrade to PRO to add team members."
-)
+
+def seat_limit_message(cap: int) -> str:
+    """The 403 detail shown when adding or reactivating staff would exceed ``cap``."""
+    accounts = "staff account" if cap == 1 else "staff accounts"
+    return (
+        f"This install allows {cap} active {accounts}. "
+        "Deactivate a team member to add or reactivate another."
+    )
 
 
 def seat_cap_for_tier(tier: str) -> Optional[int]:
@@ -95,10 +105,10 @@ def count_active_staff(db: Session, exclude_user_id: Optional[int] = None) -> in
 def enforce_seat_cap(db: Session, exclude_user_id: Optional[int] = None) -> None:
     """Raise 403 if adding/activating one more staff seat would exceed the cap.
 
-    Reads the current tier from ``plugin_registry``. On a capped tier
-    (community), blocks the action when the resulting active-staff count would
-    exceed the cap. On an uncapped tier (professional/enterprise) this is a
-    no-op.
+    Reads the current tier from ``plugin_registry``. On a capped tier, blocks
+    the action when the resulting active-staff count would exceed the cap. On an
+    uncapped tier (professional/enterprise, and community while
+    ``COMMUNITY_SEAT_CAP`` is ``None``) this is a no-op.
 
     GRANDFATHER: this only guards the *incremental* seat. It never touches or
     deactivates existing users; installs already over the cap keep working and
@@ -121,7 +131,7 @@ def enforce_seat_cap(db: Session, exclude_user_id: Optional[int] = None) -> None
             id so it is not double-counted against the cap.
 
     Raises:
-        HTTPException: 403 when the community seat cap would be exceeded.
+        HTTPException: 403 when the tier's seat cap would be exceeded.
     """
     cap = seat_cap_for_tier(get_tier())
     if cap is None:
@@ -144,5 +154,5 @@ def enforce_seat_cap(db: Session, exclude_user_id: Optional[int] = None) -> None
     if current_active_staff >= cap:
         raise HTTPException(
             status_code=403,
-            detail=SEAT_LIMIT_MESSAGE,
+            detail=seat_limit_message(cap),
         )

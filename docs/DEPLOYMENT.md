@@ -79,7 +79,7 @@ Copy `backend/.env.example` to `.env` in the project root. Docker Compose reads 
 | `DB_NAME` | `filaops` | Database name |
 | `DB_USER` | `postgres` | Database user |
 | `DB_PASSWORD` | - | Database password. **Must change in production.** |
-| `SECRET_KEY` | - | JWT signing key. Generate: `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `SECRET_KEY` | - | JWT signing key. Generate: `openssl rand -hex 32` or `python -c "import secrets; print(secrets.token_hex(32))"`. If it is empty or a placeholder, production refuses to start and other environments use a temporary key that changes on every restart, which signs everyone out. |
 | `ALLOWED_ORIGINS` | `http://localhost` | Comma-separated CORS origins (match your frontend URL/port) |
 | `ENVIRONMENT` | `development` | Set to `production` for deployments |
 
@@ -102,10 +102,11 @@ See `backend/.env.example` for the full list including SMTP, shipping, MRP, and 
 
 The included `docker-compose.yml` is production-ready:
 
-- **Backend** runs as `appuser` (non-root) inside the container
+- **Backend** runs as `appuser` (non-root) inside the container. It starts as root only to install plugins and give `appuser` the directories it writes (uploads, logs, static, the config volume).
 - **Frontend** runs as `nginx` user (non-root)
 - **Database** data persists in the `filaops_pgdata` named volume
 - **Uploads** are bind-mounted at `./uploads:/app/uploads`
+- **Instance config** (`install_uuid`) persists in the `filaops_config` named volume at `/var/lib/filaops/config`. Stored secrets such as the AI API key are encrypted with a key derived from it, so keep this volume and back it up with the database.
 
 ### Production `.env` Example
 
@@ -114,8 +115,8 @@ DB_HOST=db
 DB_PORT=5432
 DB_NAME=filaops
 DB_USER=filaops_app
-DB_PASSWORD=use-a-64-char-random-string-here
-SECRET_KEY=another-64-char-random-string-here
+DB_PASSWORD=<output of openssl rand -hex 32>
+SECRET_KEY=<a different output of openssl rand -hex 32>
 ENVIRONMENT=production
 ALLOWED_ORIGINS=https://erp.example.com
 FRONTEND_URL=https://erp.example.com
@@ -128,7 +129,7 @@ LOG_FORMAT=json
 ```bash
 docker compose up -d --build       # Start
 docker compose down                # Stop (keeps data)
-docker compose down -v             # Stop and DESTROY database volume
+docker compose down -v             # Stop and DESTROY the database and config volumes
 ```
 
 ## 5. Database Migrations
