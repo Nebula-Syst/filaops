@@ -13,6 +13,7 @@
  * - Para excluir un elemento: class="notranslate" o translate="no".
  */
 import es from "./locales/es.json";
+import { convertInline, convertSplit, onCurrencyReady } from "./currency";
 
 const STORAGE_KEY = "nebula.lang";
 // "en" no traduce nada, pero pasa por la capa para aplicar la marca PrintFlow
@@ -134,10 +135,21 @@ function start(lang) {
     const current = node.data;
     if (written.get(node) === current) return;
     if (!node.parentElement || isSkipped(node.parentElement)) return;
-    const out = translate(current);
-    if (out != null) {
+    const translated = translate(current);
+    let out = translated ?? current;
+    // Importes con "$" fijo → moneda de la empresa (ver ./currency.js)
+    const money = convertInline(out);
+    if (money != null) out = money;
+    if (out !== current) {
       written.set(node, out);
       node.data = out;
+    }
+    const split = convertSplit(node);
+    if (split) {
+      for (const [n, text] of split) {
+        written.set(n, text);
+        if (n.data !== text) n.data = text;
+      }
     }
   };
 
@@ -181,6 +193,8 @@ function start(lang) {
   });
 
   walk(document.documentElement);
+  // La moneda llega después del login: se repasa la página entera una vez
+  onCurrencyReady(() => walk(document.body));
   observer.observe(document.documentElement, {
     subtree: true,
     childList: true,
