@@ -23,6 +23,13 @@ describe('formatCurrency', () => {
     expect(formatCurrency(NaN)).toBe('')
   })
 
+  it('formats Decimal strings from the API (Nebula fork)', () => {
+    expect(formatCurrency('25.00')).toBe('$25.00')
+    expect(formatCurrency('1234.5')).toBe('$1,234.50')
+    expect(formatCurrency('')).toBe('')
+    expect(formatCurrency('abc')).toBe('')
+  })
+
   it('formats zero correctly', () => {
     expect(formatCurrency(0)).toBe('$0.00')
   })

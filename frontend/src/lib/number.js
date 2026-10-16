@@ -47,11 +47,14 @@ export function toFixedSafe(n, digits = 2) {
  * @param {string} [locale] — defaults to company locale (set by setLocaleDefaults)
  */
 export function formatCurrency(n, currency = _defaultCurrency, locale = _defaultLocale) {
-  if (n === null || n === undefined || !Number.isFinite(n)) return "";
+  // Nebula (fork): la API manda los importes Decimal como texto ("25.00");
+  // sin convertirlos, Number.isFinite("25.00") es false y el total salía vacío.
+  const value = typeof n === "string" ? parseDecimal(n) : n;
+  if (value === null || value === undefined || !Number.isFinite(value)) return "";
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     maximumFractionDigits: 2,
-  }).format(n);
+  }).format(value);
 }
 
