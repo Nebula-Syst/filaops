@@ -23,7 +23,8 @@ def reload_seat_limits(monkeypatch):
 
 def test_sin_variable_mantiene_el_limite_de_upstream(reload_seat_limits):
     mod = reload_seat_limits(None)
-    assert mod.seat_cap_for_tier("community") == 1
+    # Desde 4.3.1 upstream no limita el plan community (antes era 1)
+    assert mod.seat_cap_for_tier("community") == mod.COMMUNITY_SEAT_CAP
 
 
 @pytest.mark.parametrize("value", ["unlimited", "UNLIMITED", "none", "0"])
