@@ -30,6 +30,17 @@ describe("Nebula i18n translator", () => {
     expect(t("Select PLA-BLK-01")).toBe("Seleccionar PLA-BLK-01");
   });
 
+  it("gana el patrón más específico aunque esté después en la lista", () => {
+    const tt = createTranslator({
+      texts: {},
+      patterns: [
+        ["{0} work order(s)", "{0} orden(es) de trabajo"],
+        ["Created {0} work order(s)", "{0} orden(es) de trabajo creada(s)"],
+      ],
+    });
+    expect(tt("Created 1 work order(s)")).toBe("1 orden(es) de trabajo creada(s)");
+  });
+
   it("no traduce a medias una frase entera con un patrón corto", () => {
     expect(t("Add your first product, material, or component to get started.")).toBeNull();
     expect(t("Add ?sslmode=require to DATABASE_URL")).toBeNull();

@@ -5,7 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [4.3.1] - 2026-10-14
+
+### Changed
+
+- **No staff account limit.** Installs without a licence can add and reactivate as many staff (admin and operator) accounts as they need. 4.2.0 and 4.3.0 allowed one: the Team Members page showed a seat banner, disabled **Add User**, and the API refused a second staff account with 403. Customer accounts were never counted.
+
+### Upgrade notes
+
+- **No database migrations.** From 4.3.0, check out `v4.3.1` and rebuild (`docker compose up -d --build`).
+- **Coming from 4.1.x or older?** Read [Upgrading FilaOps](docs/UPGRADE.md) first: it starts with the settings 4.2.0 needs, then upgrades straight to 4.3.1.
+
+## [4.3.0] - 2026-10-14
+
+### Added
+
+- **Serial number prefix setting.** Admins can set the prefix for new serial numbers in **Admin > Settings > Serial Numbers** (letters, digits and dashes; a trailing dash is added). New installs use `SN-`, giving serials like `SN-20261013-0001`. Before, every serial started with `BLB-`.
+- **Onboarding asks for a customer contact email.** Step 1 of the setup wizard has a new optional field, "Customer Contact Email": the address customers are told to contact in emails. Left blank, the new admin's email is used. It is saved to Company Settings.
+
+### Changed
+
+- **Customer emails use the business name and email from Company Settings.** Password reset emails (approved, denied, changed) now take the shop name and contact address from **Admin > Settings > Company Information**. They fall back to `BUSINESS_NAME`, `BUSINESS_EMAIL` and `SMTP_FROM_NAME` in `.env`, then to "FilaOps" and "contact your administrator". Before, they used the `.env` values or their shipped placeholders (`Your Company Name`, `info@yourcompany.com`), and three of them ended with a hard-coded "BLB3D Printing" footer.
+- **The shop's own logo in the sidebar and on the login page.** An uploaded company logo now replaces the FilaOps wordmark at the top of the sidebar, with a small "Powered by FilaOps" line at the bottom. The login page shows the shop's logo above the FilaOps logo. With no logo uploaded, FilaOps shows as before. Before, the login page always showed the BLB3D logo, and an uploaded logo was squeezed to zero width in the sidebar.
+- **AI settings: the Claude model list comes from Anthropic.** The model dropdown now lists the models your saved API key can use (Anthropic's Models API, cached for 10 minutes; admins only) instead of three hard-coded models. If Anthropic can't be reached, a short built-in list of current models is shown with the reason. The per-document cost estimates are gone; the page links to Anthropic's pricing instead.
+- **AI settings: Test Connection checks the selected model.** It now sends a one-token request to Anthropic with the model picked on the page, so a rejected key or a retired or mistyped model ID is reported at setup time. Before, it only checked that the key started with `sk-`.
+- **New default Claude model: `claude-sonnet-5-5`.** The settings page and the API now use the same default. The page's built-in default and its "Haiku 3.5" option used `claude-haiku-3-5-20241022`, which was never a valid model ID; the API defaulted to `claude-sonnet-4-20250514`, which Anthropic has deprecated.
+
+### Upgrade notes
+
+- **Upgrading from 4.1.x or older?** Read [docs/UPGRADE-4.2.0.md](docs/UPGRADE-4.2.0.md) first. 4.3.0 includes 4.2.0's security fixes and its required configuration changes.
+- **Check Company Settings before customers get email.** The shop name and email in **Admin > Settings > Company Information** now win over `BUSINESS_NAME`, `BUSINESS_EMAIL` and `SMTP_FROM_NAME` in `.env`. If they are filled in, customer emails will use them.
+- **Serial numbering carries on unchanged.** The upgrade runs database migration 104. An install that already has serials starting with `BLB-` keeps `BLB-` as its prefix, so the next serial follows on from the last one; every other install gets `SN-`. Existing serial numbers are never renamed. Changing the prefix later affects new serials only.
+- **Saved Claude models are not changed.** Check the model in **Admin > Integrations > AI Assistant** after upgrading. If someone picked "Haiku 3.5", the install has `claude-haiku-3-5-20241022` stored, which Anthropic does not recognise; installs that never picked a model have `claude-sonnet-4-20250514`, which is deprecated. A saved model Anthropic no longer lists stays selected and is marked "not listed by Anthropic (may be retired)"; pick a listed model, use Test Connection and save.
+- **Docker: re-enter the AI API key once if it shows as not set after upgrading.** The backend's instance ID (`install_uuid`, under `/var/lib/filaops/config`) now lives in a named volume, `filaops_config`. Before this release it was lost whenever the backend container was recreated, including by `docker compose up -d --build`, and stored secrets encrypted with it could no longer be read. The upgrade cannot bring back an ID that is already gone: the container keeps whatever ID it has when the volume is first attached. If **Admin > Integrations > AI Assistant** shows no key afterwards, enter it again; from then on it survives upgrades. If you already mount your own volume or directory at `/var/lib/filaops/config` in an override file, yours still takes precedence (`docker compose config` shows the result).
+- **Back up the `filaops_config` volume with the database.** A database restored without it cannot decrypt stored secrets. `docker compose down -v` now deletes this volume as well as the database volume.
+- **Docker: the backend now runs as `appuser`, not root.** The image always meant to, but the entrypoint never switched user. At startup it gives `appuser` the files in `/app/uploads` (on a Linux host, the owner of files in `./uploads` changes to uid 100) and the config directory. If one of them cannot be made writable, it logs a warning and keeps running as root. `docker compose exec` still opens a root shell; `docker compose run backend <command>` now runs as `appuser`.
+
+### Fixed
+
+- **Docker: stored secrets survive recreating the backend container.** `docker-compose.yml` mounts the `filaops_config` volume at `/var/lib/filaops/config`, and a test checks that every shipped compose file that runs the backend persists that directory.
+- **Docker: the backend no longer runs as root.** The entrypoint installs plugins as root, then runs migrations and the API server as `appuser`. A test checks that every command the entrypoint runs goes through that switch.
+- **Onboarding saves the company name again.** Since #513 the setup wizard silently failed to save the company name (a broken import inside a `try`), so every fresh install started with an empty Company Settings name.
+- **Mobile navigation button no longer covers the open menu.** The floating "Open navigation menu" button is hidden while the mobile drawer is open; the drawer has its own close button.
+
+## [4.2.0] - 2026-10-12
+
+### Upgrade notes
+
+This is a security release; every install should upgrade. **Read [docs/UPGRADE-4.2.0.md](docs/UPGRADE-4.2.0.md) before upgrading.** In short:
+
+- **Set a real `SECRET_KEY`.** Production refuses to start with an empty, placeholder or published example key. Other environments start with a temporary random key that signs everyone out on every restart. Setting or changing the key signs everyone out once.
+- **Customer self-registration and public quote intake are off by default.** `ENABLE_PUBLIC_QUOTER=true` turns them on; set it only if you need them. Before 4.2.0 self-registration was always on.
+- **Customer accounts can only use their own quotes and account.** Scripts or integrations that sign in as a customer account need a staff account.
+- **Set `ADMIN_APPROVAL_EMAIL` to a real address if you send email.** Email counts as off until it is set. Docker installs now pass the SMTP settings through to the backend.
+- **Password reset always waits for an administrator.** Reset links issued earlier without an administrator's approval no longer work.
+- **Scrap reasons and AI (Ollama) settings are admin-only.**
+- **The database is published on `127.0.0.1` only (Docker).** Other machines can no longer reach port 5432. If your install still uses the default `DB_PASSWORD`, set a real one; the guide explains how to change it on an existing install and what to do if another machine needs the database.
+- **Without a licence, FilaOps allows one staff account.** Existing installs keep all their current users but can't add or reactivate staff. Customer accounts don't count.
+- **Order, shipping and invoice steps are enforced by the server.** An order is marked shipped only by the Ship action, once it is ready to ship; it is cancelled only by the Cancel action; and its production is released only after billing has started (a payment recorded or an invoice sent). An invoice's status can only go from draft to sent directly; voiding uses the new Void action. Scripts that set these statuses directly now get an error.
+- **A manual inventory adjustment adds or removes the quantity you enter** (`+5` adds five, `-5` removes five) instead of setting the on-hand quantity. Use Reconciliation to set an exact count.
+- **Accounting figures may change.** Reports count posted journal entries only, COGS comes from the general ledger, and completing production now posts to the ledger. Production completed before 4.2.0 has no ledger entries; `backend/scripts/backfill_production_completion_gl.py` can add them (dry run by default; read its `--help` first).
+- **Manual (non-Docker) installs need Node.js 24 or newer** to build the frontend.
+- **This release runs database migrations (093 to 102).** Back up first; rolling back means restoring that backup. The upgrade stops if two sales orders share the same imported order ID; the guide shows how to check for that before you start.
 
 ### Added
 
@@ -24,10 +85,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **QC inspection photos (#784).** Attach defect/evidence images to a QC inspection: `POST`/`GET /api/v1/production-orders/qc-inspections/{inspection_id}/photos`, `GET .../{photo_id}/download`, `PATCH .../{photo_id}` (caption), and `DELETE .../{photo_id}`. Images only (jpg/jpeg/png/webp/gif/heic/heif), 25 MB cap, stored in a dedicated `uploads/qc_photos` directory (override `UPLOAD_QC_PHOTOS_DIR`). The surface respects the QC dial — every route 403s when `quality_mode=off`.
 - **QC inspection measurements (#784).** `POST /api/v1/production-orders/{id}/qc` accepts a `measurements` list (characteristic, nominal, lower/upper limit, measured value, unit) stored as exact `Numeric` (SPC-ready). The inspection history returns each measurement with a computed `is_within_spec` (true/false vs the limits, or null when no value or no limits are defined).
 - **QC defect taxonomy + waive attribution (#784).** New configurable defect reasons (`GET/POST /api/v1/production-orders/defect-reasons`, `/all`, `PATCH /{id}`) with free-form category and a `minor|major|critical` severity. Recording a QC inspection (`POST /production-orders/{id}/qc`) now accepts a `defect_reason_id` and, on a `waived` result, attributes the waive to the operator (`waiver_user_id`); the inspection history exposes the defect reason and waiver.
+- **Invoice void (#894).** `POST /api/v1/invoices/{invoice_id}/void` with a required reason voids an invoice and posts a reversing journal entry that mirrors the original one. An invoice with payments must have them voided or refunded first. The void is recorded on the invoice (who, when, why; migration 102). (#912, #919)
+- **Operation types (#876).** Routing operations now carry a type from a catalog (print, assembly, quality control, pack and ship, and others; migration 101), and material consumption follows the type instead of the free-text operation code. The routing editor asks for the type first and shows it as a badge on every operation. Admins can review existing operations with `GET /api/v1/admin/operation-types/audit` and type them with a classifier that previews first; nothing is reclassified automatically. (#898, #900, #901, #905, #906)
+- **Ledger health and backfill (#880).** A GL-health count shows completed production with no ledger entry, and `backend/scripts/backfill_production_completion_gl.py` posts the missing entries: dry run by default, `--apply` only with a recent backup, and `--rollback` to undo. (#892)
+- **Command Center next actions (#808).** Command Center shows each order's next actions in lanes, and the sales and purchase order lists return the `can_*` / `is_*` flags the screens use. (#810, #811, #812, #813, #814)
+- **Operation-level scrap.** The Scrap button on an operation and its preview of what the scrap affects now work; both routes were missing. (#868)
+- **Printer catalog refresh.** 28 printer models with checked bed size, enclosure, chamber and nozzle details; discontinued models are marked as such. (#908)
+- **Workbench look.** New design tokens and a petrol accent colour; the Production, Shipping and order detail screens use them. (#847, #854, #870, #991, #992, #1007)
 
 ### Changed
 
 - **Quality metrics — true first-pass yield (#784).** `GET /api/v1/quality/metrics` now derives `first_pass_yield`, `passed`, `failed`, and `total_inspections` from each order's **first `qc_inspections` row** instead of the `ProductionOrder.qc_status` cache. The cache is last-write-wins, so an order that failed initial inspection and was later re-inspected or waived to "passed" previously counted as a first-pass success and inflated the yield. **Expect FPY to move** (typically downward) where re-inspections occur — this is the corrected value, not a regression. Orders inspected before inspection rows were recorded are not counted in the metric.
+- **Role refusals use the shared checks.** Most routes that checked the admin or staff role inside the handler now use the shared dependencies. A refused caller gets 403 `Admin access required` or `Staff access required`, and gets it before the request body is validated (some routes answered 422 first). Operators keep the access they had, except for scrap-reason changes (see **Upgrade notes**). On the sales-order routes that still means only the orders an operator owns; admins reach every order, as before.
+- **Customer quote acceptance refuses amounts a quote cannot store.** `POST /api/v1/quotes/portal/{quote_id}/accept` answers 422 when `shipping_cost` or `adjusted_unit_price` is finer than a cent or above 99,999,999.99, and when subtotal + tax + shipping would be above 99,999,999.99. These requests used to fail with a 500.
+- **Approving a quote clears its review reason.** Setting a quote to `approved` (`PATCH /api/v1/quotes/{quote_id}/status`) now clears `requires_review_reason` (for example customer notes or a colour choice that needs review), because the approval is the review. The cleared reason is written to the log. Other status changes keep it.
+- **Putting a quote back to pending holds it for staff.** Setting a quote to `pending` now also marks it as manually approved (`approval_method` becomes `manual`), so a customer accepting it again doesn't re-approve it on their own; it stays pending until staff approve it.
+- **A status change adds its note instead of replacing the admin notes.** An `admin_notes` value sent with `PATCH /api/v1/quotes/{quote_id}/status` is added on a new line after the existing notes, so it can't erase what is already there. If the notes would go over 1,000 characters, the request is refused with 400 and nothing changes. Editing a quote still replaces its notes.
+- **`ENVIRONMENT` is read the same way everywhere.** Every production check now ignores case and surrounding spaces. `ENVIRONMENT=Production` or `production ` already refused a placeholder `SECRET_KEY`; it now also turns off the API docs (`/docs`, `/redoc`, `/openapi.json`), sends the HSTS header and keeps the test endpoints off, as `ENVIRONMENT=production` does.
+- **Shipping goes through the Ship action.** A general status change can no longer set an order to `shipped`; `POST /api/v1/sales-orders/{order_id}/ship` is the only way, so stock and COGS are always recorded. Only orders that are ready to ship can ship; the ship step checks stock before changing anything, records the shipped quantity on each line, and refuses a second, concurrent ship. Marking an order shipped with an outside label, and consolidated shipments, now relieve stock and post to the ledger for every order. (#838, #840, #841, #843, #893)
+- **Cancelling goes through the Cancel action.** A status change to `cancelled` is refused; the Cancel action records when and why and releases linked production orders and reservations. (#874)
+- **Production release needs billing.** Releasing production for an order answers 400 until a payment is recorded or an invoice is sent. Net-terms customers don't have to pay first. (#853)
+- **Invoice status.** `PATCH /api/v1/invoices/{invoice_id}` changes the status only from `draft` to `sent`; other status values are refused. Use the Void action to void an invoice. (#912)
+- **Manual inventory adjustments are signed.** The quantity is added (`+`) or removed (`-`) and can't take stock below zero; receipts, issues, consumption, scrap and transfers refuse zero or negative quantities. The adjustment reason is now saved. (#851)
+- **Accounting reports.** The trial balance and account ledger count posted entries only (`include_unposted=true` gives the old totals); COGS on the dashboard, profit summary and COGS report comes from the general ledger; and completing production posts to the ledger. (#890, #891, #892, #897)
+- **Fiscal periods.** Closing a period marks it closed for reporting; it does not lock entries. The screens and API docs now say so. (#987)
+- **Imported orders.** A sales order's imported order ID (`source_order_id`) must be unique (migration 094), so importing the same file twice can't create the same order twice. (#785, #803)
+- **Node.js 24.** The frontend build, CI and the Docker builder use Node.js 24 LTS. (#934)
+
+### Fixed
+
+- **Quality.** The Quality module's crashes, queue and metrics (#791); scrapping a completed or QC-held order writes off the finished goods and posts to the ledger, and the Scrap button is reachable (#780, #781, #794, #799); purchase orders show as ready for QC when they are complete (#809).
+- **Production.** Completing fewer units than ordered recorded the full quantity, and closing short was impossible; splitting an order failed (#867). The scrap and the QC-and-completion flows work end to end (#856, #860).
+- **Inventory and costing.** Products built from a routing consume their materials and get COGS at completion, and packaging on a routing is consumed at shipping (#875). Completion and operation consumption post to the right inventory account for each item type (#914).
+- **Payments and invoices.** Voiding or refunding a payment updates the linked invoice, and a refund larger than what was collected is refused (#852).
+- **Accounting.** Delivered orders no longer drop out of the sales journal and Tax Center (#913). Journal entries keep their entry date, shipping can't post twice, and purchase receipts post by item type (#891).
+- **Orders.** CSV order import numbers orders correctly, uses the chosen source, and no longer creates duplicates (#803, #805). New orders can be cancelled (#874). Products built from a routing can be sold, and raw materials no longer appear in the customer order picker (#887, #888).
+- **Scheduling.** Operations scheduled on a printer show their machine, and the capacity view and auto-schedule use real bookings (#863, #864).
+- **Routings.** Copying a routing to a product or its variants no longer duplicates operations when the request is repeated (#907).
+- **Other.** The analytics dashboard no longer fails with a 500 (#768); production order pages such as scrap reasons are no longer hidden behind the order detail route (#818); the login connection banner is readable again (#993); a `backend/.dockerignore` keeps local files out of the backend image (#921).
+
+### Security
+
+This release fixes five security problems. Details are in the linked advisories.
+
+- **Access control on the Core API.** Customer accounts could use API routes meant for shop staff, including quotes, payments and purchase orders, and a few routes answered without a login. Every Core route now requires a staff or admin account unless it is on a short, reviewed list of public and customer routes, and a test fails if a new route is added without a check. ([GHSA-jgwx-xrmr-26fv](https://github.com/BLB3DPrinting/filaops/security/advisories/GHSA-jgwx-xrmr-26fv), [GHSA-f9mr-93x7-cq5q](https://github.com/BLB3DPrinting/filaops/security/advisories/GHSA-f9mr-93x7-cq5q), [GHSA-vrr8-gpvm-732v](https://github.com/BLB3DPrinting/filaops/security/advisories/GHSA-vrr8-gpvm-732v))
+- **Login signing key.** FilaOps no longer signs logins with a placeholder or published example `SECRET_KEY`. ([GHSA-r4j7-j592-gchw](https://github.com/BLB3DPrinting/filaops/security/advisories/GHSA-r4j7-j592-gchw))
+- **Password reset.** Reset requests always need an administrator's approval, and the reset response never contains a reset link. ([GHSA-f9mr-93x7-cq5q](https://github.com/BLB3DPrinting/filaops/security/advisories/GHSA-f9mr-93x7-cq5q))
+- **Outbound requests from AI settings.** The Ollama URL is validated when saved and again before every request, and some special-purpose addresses are refused. Local and LAN addresses still work. ([GHSA-vmrm-qwq2-8xj3](https://github.com/BLB3DPrinting/filaops/security/advisories/GHSA-vmrm-qwq2-8xj3))
+- **Customer quote acceptance.** The server now works out the price and total when a customer accepts a quote, and ignores pricing sent by the browser.
+- **Database port.** The stock `docker-compose.yml` now publishes the database on the local machine only, instead of on every network interface, and a test fails if a compose file the repo ships publishes it more widely. FilaOps itself still reaches the database over Docker's internal network.
+- **Other hardening.** Staff-only fields are hidden from customer accounts, stored printer connection secrets are masked in responses, a very long field name in printer settings no longer ties up the server, QC photo uploads are kept inside their folder (#972), and this release ships access fixes merged after 4.1.0 (#859, #872, #973).
+- **Dependencies.** Unused `python-jose` and its `ecdsa` dependency are removed, and other Python and JavaScript dependencies are updated to clear published advisories (#948, #956, #957, #997, #1008, #1012).
+
+Thanks to the people who reported these problems; see [SECURITY.md](SECURITY.md).
 
 ## [4.1.0] - 2026-06-20
 

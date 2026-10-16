@@ -31,7 +31,7 @@ Navigate to **Admin > Settings** in the sidebar to reach the central configurati
 
 ### Company Logo
 
-Your logo appears on quote PDFs and invoices.
+Your logo appears at the top of the sidebar (in place of the FilaOps wordmark, with a small "Powered by FilaOps" line at the bottom), on the login page, and on quote PDFs and invoices. Without a logo, the sidebar shows FilaOps.
 
 **To upload a logo:**
 
@@ -47,7 +47,7 @@ Fill in your business details. These appear on customer-facing documents like qu
 
 | Field | Notes |
 |-------|-------|
-| **Company Name** | Your business name as it appears on documents |
+| **Company Name** | Your business name as it appears on documents and in customer emails |
 | **Address Line 1** | Street address |
 | **Address Line 2** | Suite, unit, or building (optional) |
 | **City** | City name |
@@ -56,7 +56,7 @@ Fill in your business details. These appear on customer-facing documents like qu
 | **Country** | Country name (defaults to `USA`) |
 | **Timezone** | Selected from a dropdown of IANA timezone names — controls date/time display in reports and charts (defaults to `America/New_York`) |
 | **Phone** | Business phone number — automatically formatted as `(555) 123-4567` as you type |
-| **Email** | Business contact email |
+| **Email** | Business contact email. Customer emails tell customers to contact this address. |
 | **Website** | Your website address (optional) |
 
 ### Regional Settings
@@ -155,6 +155,19 @@ The **Dispatch Settings** section controls how the **Command Center** assigns wo
 !!! warning "Maintenance warnings always require manual review"
     Even with auto-dispatch enabled, any suggestion that carries a maintenance warning is **never** auto-confirmed. Those jobs always require an operator to review and confirm manually.
 
+### Serial Numbers
+
+The **Serial Numbers** section sets the prefix for serial numbers given to finished units of serial-tracked products. Serials look like `SN-20261013-0001`: the prefix, the date, then a running number for that day.
+
+| Field | Notes |
+|-------|-------|
+| **Serial Number Prefix** | Letters, digits and dashes, starting with a letter or digit, up to 12 characters. A trailing dash is added if you leave it off. New installs use `SN-`. |
+
+This section has its own **Save Serial Prefix** button. Only admins can change the prefix; operators can see it.
+
+!!! note "Existing serials keep their numbers"
+    Changing the prefix affects new serials only. Serials already issued are never renamed, and each prefix keeps its own running number. An install that issued `BLB-` serials before this setting existed keeps `BLB-` after upgrading, so its numbering carries on.
+
 ### AI Configuration
 
 The AI provider setup (Anthropic Claude, Ollama) has moved to **Admin > Integrations**. The Company Settings page shows a signpost with a direct link to the new location. See [Integrations](#integrations) below.
@@ -246,7 +259,7 @@ The parent's code is shown in the **Parent** column for easy reference.
 
 ## Scrap Reasons
 
-Navigate to **Admin > Scrap Reasons** in the sidebar to define the failure modes tracked when scrapping production orders.
+Navigate to **Admin > Scrap Reasons** in the sidebar to define the failure modes tracked when scrapping production orders. Only Admins can add, edit, or delete scrap reasons; Operators pick from the list when they scrap work.
 
 ![Scrap Reasons page showing the reasons table with Order, Code, Name, Description, Status columns, and the Add Reason button](../assets/screenshots/settings/04-scrap-reasons.png)
 
@@ -296,9 +309,13 @@ The **AI Assistant** card configures the AI provider used for features like invo
 
     1. Select **Anthropic** as the provider.
     2. Paste your Anthropic API key (from [console.anthropic.com/account/keys](https://console.anthropic.com/account/keys)).
-    3. Optionally choose a **Claude model** from the dropdown (defaults to `claude-sonnet-4-20250514`).
-    4. Click **Test Connection** to verify the connection.
-    5. Save.
+    3. Save, so FilaOps can ask Anthropic which models your key can use.
+    4. Choose a **Claude model** from the dropdown. The list comes from Anthropic, so it stays current as models are released and retired; **Refresh list** loads it again. The default is `claude-sonnet-5-5`. Prices differ by model; see [Anthropic's pricing](https://platform.claude.com/docs/en/about-claude/pricing).
+    5. Click **Test Connection**. It sends a one-token request with the selected model, so a bad key or a retired or mistyped model is reported now rather than when an invoice is parsed.
+    6. Save.
+
+    !!! note "Saved model not listed"
+        If your saved model is no longer in Anthropic's list, it stays selected and is marked **not listed by Anthropic (may be retired)**. Pick a listed model and test it. If Anthropic can't be reached (no key saved, a rejected key or no internet), the dropdown shows a short built-in list of current models and the reason.
 
     !!! note "Key display"
         The UI only ever displays the first 3 and last 4 characters of a saved key. The full key is never shown again after saving.
@@ -315,6 +332,9 @@ The **AI Assistant** card configures the AI provider used for features like invo
     3. Set the **Ollama model** (defaults to `llama3.2`).
     4. Click **Test Connection**. If Ollama is not running, a **Start Ollama** button appears to attempt to launch it in the background.
     5. Save.
+
+    !!! note "Which Ollama URLs work"
+        Use a plain address such as `http://localhost:11434`, `http://192.168.1.20:11434` or a host name on your network, with `http://` or `https://`, and without a username, password, `?` or `#`. Addresses on the same machine, your LAN or Tailscale work. Link-local, cloud metadata (such as `169.254.169.254`) and multicast addresses are refused. FilaOps connects to the Ollama URL directly and does not use proxy settings such as `HTTP_PROXY` for it.
 
 ---
 
@@ -352,6 +372,7 @@ The **AI Assistant** card configures the AI provider used for features like invo
 | Set default margin for price suggestions | **Admin** > **Settings** > Pricing |
 | Set business hours for production | **Admin** > **Settings** > Business Hours (Production Operations) |
 | Configure auto-dispatch | **Admin** > **Settings** > Dispatch Settings |
+| Set the serial number prefix | **Admin** > **Settings** > Serial Numbers |
 | Configure AI provider | **Admin** > **Integrations** > AI Assistant |
 | Check for updates | **Admin** > **Settings** > Version & Updates |
 | Manage inventory locations | **Inventory** > **Locations** |
