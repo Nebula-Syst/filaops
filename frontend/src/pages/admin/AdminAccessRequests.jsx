@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useApi } from "../../hooks/useApi";
 import { useToast } from "../../components/Toast";
 import { useFeatureFlags } from "../../hooks/useFeatureFlags";
+import { parseDateTime } from "../../utils/formatting"; // Nebula: UTC sin "Z" del backend
 
 const STATUS_COLORS = {
   pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
@@ -296,7 +297,7 @@ export default function AdminAccessRequests() {
 
                   <div className="mt-2 text-xs text-gray-500">
                     Submitted {new Date(req.created_at).toLocaleDateString()}{" "}
-                    {new Date(req.created_at).toLocaleTimeString()}
+                    {parseDateTime(req.created_at)?.toLocaleTimeString()}
                     {req.setup_token_used && (
                       <span className="ml-2 text-green-500">Account created</span>
                     )}
