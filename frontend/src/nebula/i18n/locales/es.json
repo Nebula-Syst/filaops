@@ -1429,6 +1429,7 @@
   "Full ERP functionality": "Funcionalidad ERP completa",
   "Full Product-Cost COGS": "Coste de ventas con coste completo del producto",
   "Full access to all features": "Acceso completo a todas las funciones",
+  "Fully Received": "Recibido completo",
   "G - Gram": "G - Gramo",
   "GBP — British Pound": "GBP — Libra esterlina",
   "GBP — British Pound (£)": "GBP — Libra esterlina (£)",
@@ -2246,9 +2247,14 @@
   "Order Workflow": "Flujo del pedido",
   "Order actions:": "Acciones del pedido:",
   "Order already shipped": "El pedido ya se ha enviado",
+  "Order cancelled": "Pedido cancelado",
+  "Order closed short": "Pedido cerrado incompleto",
   "Order completed (short by": "Pedido completado (faltan",
   "Order completed short. Failed to create remake order - please create manually.": "Pedido completado incompleto. No se pudo crear la orden de repetición; créala manualmente.",
+  "Order confirmed": "Pedido confirmado",
   "Order confirmed, but some related data failed to refresh": "Pedido confirmado, pero no se pudieron actualizar algunos datos relacionados",
+  "Order created": "Pedido creado",
+  "Order created from quote": "Pedido creado desde presupuesto",
   "Order deleted": "Pedido eliminado",
   "Order delivered": "Pedido entregado",
   "Order delivered in person": "Pedido entregado en mano",
@@ -2267,7 +2273,10 @@
   "Order must have a product line": "El pedido debe tener una línea de producto",
   "Order must have a product to check availability": "El pedido debe tener un producto para comprobar la disponibilidad",
   "Order not found": "No se ha encontrado el pedido",
+  "Order picked up": "Pedido recogido por el cliente",
   "Order picked up by customer": "Pedido recogido por el cliente",
+  "Order rejected": "Pedido rechazado",
+  "Order shipped": "Pedido enviado",
   "Order:": "Pedido:",
   "Ordered": "Pedido",
   "Ordered:": "Pedido:",
@@ -2382,6 +2391,7 @@
   "Payment Processing": "Procesamiento de pagos",
   "Payment Ref": "Ref. del pago",
   "Payment Terms": "Condiciones de pago",
+  "Payment received": "Pago recibido",
   "Payment recorded": "Pago registrado",
   "Payment voided": "Pago anulado",
   "Payments": "Pagos",
@@ -2426,6 +2436,7 @@
   "Pick different…": "Elegir otro…",
   "Pick the download for your operating system and install it. Then run caddy run in your project folder (in PowerShell, .\\caddy.exe run if you saved caddy.exe in that folder).": "Elige la descarga para tu sistema operativo e instálala. Después ejecuta caddy run en la carpeta del proyecto (en PowerShell, .\\caddy.exe run si guardaste caddy.exe en esa carpeta).",
   "Pick variant to consume": "Elige la variante a consumir",
+  "Picked Up": "Recogido",
   "Picked up by customer": "Recogido por el cliente",
   "Pieces (pcs)": "Piezas (uds)",
   "Place Order": "Hacer pedido",
@@ -3137,8 +3148,10 @@
   "Shipping Expense": "Gasto de envío",
   "Shipping Integrations": "Integraciones de envío",
   "Shipping Label": "Etiqueta de envío",
+  "Shipping Label Created": "Etiqueta de envío creada",
   "Shipping Tracking": "Seguimiento del envío",
   "Shipping address updated": "Dirección de envío actualizada",
+  "Shipping charge updated": "Cargo de envío actualizado",
   "Shipping:": "Envío:",
   "Shopify Sync": "Sincronización con Shopify",
   "Short": "Falta",
@@ -3772,13 +3785,16 @@
   "auto-confirmed — those always require operator review.": "se confirman automáticamente: siempre requieren revisión del operario.",
   "avail": "disp.",
   "available)": "disponibles)",
+  "bank_transfer": "transferencia bancaria",
   "before creating variants.": "antes de crear variantes.",
   "blocked": "bloqueado",
   "by": "por",
   "cancelled": "cancelado",
+  "cash": "efectivo",
   "catalog are automatically included for new items. Catalogs sync to the hosted portal every 15 minutes.": "se incluyen automáticamente en los artículos nuevos. Los catálogos se sincronizan con el portal alojado cada 15 minutos.",
   "catalogs are only visible to assigned customers. Products in the": "solo los ven los clientes asignados. Los productos del catálogo",
   "catalogs are visible to all portal users.": "los ven todos los usuarios del portal.",
+  "check": "cheque",
   "clean": "limpio",
   "collected": "cobrado",
   "color mapping": "asignación de colores",
@@ -3796,10 +3812,12 @@
   "created and ready for scheduling.": "creados y listos para programar.",
   "created for remaining": "creado para lo restante",
   "creating…": "creando…",
+  "credit_card": "tarjeta de crédito",
   "currently at": "actualmente en",
   "customers": "clientes",
   "day": "día",
   "default": "por defecto",
+  "delivered": "entregado",
   "deprecated, retiring soon": "obsoleto, se retirará pronto",
   "done": "hecho",
   "down": "caído",
@@ -3933,6 +3951,7 @@
   "orders": "pedidos",
   "orders awaiting fulfillment. Revenue is recognized when orders ship (accrual accounting per GAAP). Record payments via the order detail page.": "pedidos pendientes de servir. Los ingresos se reconocen al enviar los pedidos (devengo según GAAP). Registra los pagos desde el detalle del pedido.",
   "orders shipped": "pedidos enviados",
+  "other": "otro",
   "out of pocket": "coste real",
   "out. Slice it in Bambu Studio and drop the exported .gcode.3mf (it": "el tiempo. Lamínalo en Bambu Studio y suelta el .gcode.3mf exportado (se",
   "outstanding": "pendiente",
@@ -3947,6 +3966,7 @@
   "pending": "pendiente",
   "pending order": "pedido pendiente",
   "per page": "por página",
+  "picked_up": "recogido",
   "plate": "placa",
   "plates": "placas",
   "plates will be sliced in one job using the file's embedded settings. You'll then pick a material and work center, review the per-plate components, and create everything in one step.": "placas se laminarán en un solo trabajo con los ajustes incrustados en el archivo. Después elegirás un material y un centro de trabajo, revisarás los componentes por placa y lo crearás todo en un paso.",
@@ -5193,6 +5213,50 @@
   [
    "{0} (error {1}).",
    "{0} (error {1})."
+  ],
+  [
+   "Status changed to {0}",
+   "Estado cambiado a {0}"
+  ],
+  [
+   "Created {0} work order(s)",
+   "{0} orden(es) de trabajo creada(s)"
+  ],
+  [
+   "Work orders: {0}",
+   "Órdenes de trabajo: {0}"
+  ],
+  [
+   "Sales order {0} created from manual source",
+   "Pedido de venta {0} creado manualmente"
+  ],
+  [
+   "Sales order {0} created from {1} source",
+   "Pedido de venta {0} creado desde {1}"
+  ],
+  [
+   "{0}: {1} via {2}",
+   "{0}: {1} en {2}"
+  ],
+  [
+   "{0} blocked",
+   "{0} bloqueada"
+  ],
+  [
+   "{0} due today",
+   "{0} vence hoy"
+  ],
+  [
+   "{0} line changed",
+   "Línea de {0} modificada"
+  ],
+  [
+   "{0} line removed",
+   "Línea de {0} eliminada"
+  ],
+  [
+   "{0} idle",
+   "{0} parada"
   ]
  ],
  "ignored": [
