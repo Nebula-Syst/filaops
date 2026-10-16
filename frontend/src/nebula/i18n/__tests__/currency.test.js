@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { convertInline, convertSplit, parseAmount, _setCurrencyForTests } from "../currency";
 
-const nbsp = (s) => s.replace(/ | /g, " ");
+const nbsp = (s) => s.replace(/\u00a0|\u202f/g, " ");
 
 function siblings(...texts) {
   const p = document.createElement("span");
