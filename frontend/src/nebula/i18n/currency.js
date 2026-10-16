@@ -20,6 +20,7 @@ const listeners = new Set();
 /** Pide la moneda de la empresa (requiere sesión; reintenta cada 5 s si aún no la hay). */
 function ensureSettings() {
   if (settings || loading || Date.now() - lastTry < 5000) return;
+  if (import.meta.env?.MODE === "test") return; // los tests fijan la moneda a mano
   loading = true;
   lastTry = Date.now();
   fetch(`${API_URL}/api/v1/settings/company`, { credentials: "include" })
@@ -127,8 +128,9 @@ const KEEP = /\/\s*(month|mes|year|año)\b/i;
 
 /** "$" dentro del propio texto: "Total: $43.50" → "Total: 43,50 €". */
 export function convertInline(text) {
+  if (!text.includes("$") || KEEP.test(text)) return null;
   const s = active();
-  if (!s || !text.includes("$") || KEEP.test(text)) return null;
+  if (!s) return null;
   let changed = false;
   const out = text.replace(AMOUNT, (match, neg, raw, scale, offset) => {
     if (text[offset + match.length] === "{") return match;
@@ -147,9 +149,11 @@ const stripped = new WeakSet(); // nodos "$" que se han vaciado porque el númer
  * aplicar [[nodo, texto], ...] o null.
  */
 export function convertSplit(node) {
+  const data = node.data;
+  const prevNode = node.previousSibling;
+  if (!data.includes("$") && !(prevNode && stripped.has(prevNode))) return null;
   const s = active();
   if (!s) return null;
-  const data = node.data;
 
   // Nodo con el "$" al final y el número en el siguiente
   if (/(^|[^\w$])\$\s*$/.test(data) && !KEEP.test(data)) {
