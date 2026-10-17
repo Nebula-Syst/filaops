@@ -207,4 +207,3 @@ def reserve_stock(db: Session, order: SalesOrder, user_id=None) -> dict:
         if order.fulfillment_status == "pending":
             order.fulfillment_status = "ready"
     return coverage
-
