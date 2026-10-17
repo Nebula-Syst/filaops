@@ -86,6 +86,11 @@ def setup_database():
         conn.execute(text("ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS tax_name VARCHAR(100)"))
         conn.execute(text("ALTER TABLE sales_orders ALTER COLUMN unit_price DROP NOT NULL"))
         conn.execute(text("ALTER TABLE sales_order_lines ADD COLUMN IF NOT EXISTS tax_name VARCHAR(100)"))
+        # PrintFlow nebula_004: stock apartado por línea
+        conn.execute(text(
+            "ALTER TABLE sales_order_lines ADD COLUMN IF NOT EXISTS "
+            "stock_allocated_quantity NUMERIC(10,2) NOT NULL DEFAULT 0"
+        ))
         # Issue #362: material inventory on sales order lines
         # DROP NOT NULL is idempotent — safe to run if already nullable
         conn.execute(text(

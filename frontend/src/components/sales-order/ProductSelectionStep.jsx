@@ -134,7 +134,11 @@ export default function ProductSelectionStep({
             {(() => {
               const searchTerm = productSearch.trim().toLowerCase();
               const filteredProducts = products.filter((p) => {
-                if (!p.has_bom && !p.has_routing) return false;
+                // PrintFlow: todo producto terminado se puede vender, tenga o no
+                // lista de materiales (puede venderse desde stock); antes solo
+                // salían los que tenían BOM o ruta.
+                if (p.is_template) return false;
+                if (p.item_type !== "finished_good" && !p.has_bom && !p.has_routing) return false;
                 if (!searchTerm) return true;
                 const nameMatch = (p.name || "").toLowerCase().includes(searchTerm);
                 const skuMatch = (p.sku || "").toLowerCase().includes(searchTerm);
@@ -146,7 +150,7 @@ export default function ProductSelectionStep({
                   <div className="col-span-3 text-center py-8 text-gray-500">
                     {searchTerm
                       ? `No sellable products found matching "${productSearch}"`
-                      : "No sellable products available. Create a BOM or routing for your products to sell them."}
+                      : "No sellable products available. Create a finished good to sell it."}
                   </div>
                 );
               }

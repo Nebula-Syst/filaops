@@ -97,6 +97,10 @@ def sync_on_production_complete(db: Session, production_order: ProductionOrder) 
         )
         return False
 
+    # PrintFlow: la sesión no hace autoflush; sin esto las consultas de abajo
+    # no veían la orden recién completada y la línea se quedaba sin lo fabricado
+    db.flush()
+
     updated = False
 
     # Update allocated_quantity on the sales order lines this production fed.
@@ -112,7 +116,11 @@ def sync_on_production_complete(db: Session, production_order: ProductionOrder) 
         if line.id not in allocations:
             continue
         old_allocated = Decimal(str(line.allocated_quantity or 0))
-        new_allocated = allocations[line.id]
+        # PrintFlow: lo fabricado se suma a lo que ya se apartó del stock
+        new_allocated = min(
+            Decimal(str(line.quantity or 0)),
+            allocations[line.id] + Decimal(str(line.stock_allocated_quantity or 0)),
+        )
         if new_allocated != old_allocated:
             line.allocated_quantity = new_allocated
             logger.info(

@@ -237,7 +237,16 @@ export default function ItemsTable({
                 />
               </td>
               <td className="py-3 px-4 text-white font-mono text-sm">
-                {item.sku}
+                {/* PrintFlow: en el móvil las acciones quedan fuera de la
+                    pantalla; tocar el SKU abre la ficha (con stock +/−) */}
+                <button
+                  type="button"
+                  onClick={() => onEditItem(item)}
+                  className="text-left hover:text-blue-300 hover:underline"
+                  title="Edit"
+                >
+                  {item.sku}
+                </button>
               </td>
               <td className="py-3 px-4 text-gray-300">
                 {item.name}

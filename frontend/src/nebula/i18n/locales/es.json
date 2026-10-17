@@ -4115,7 +4115,27 @@
   "🎨 Filament / Materials": "🎨 Filamento / materiales",
   "📦 Components & Supplies": "📦 Componentes y suministros",
   "🖨️ Available Printers": "🖨️ Impresoras disponibles",
-  "🚀 FilaOps Pro - Coming 2026": "🚀 FilaOps Pro - Llega en 2026"
+  "🚀 FilaOps Pro - Coming 2026": "🚀 FilaOps Pro - Llega en 2026",
+  "Units in stock": "Unidades en stock",
+  "Add units": "Añadir unidades",
+  "Remove units": "Quitar unidades",
+  "Theft/Loss": "Robo/pérdida",
+  "Shipped / Delivered": "Enviados / entregados",
+  "No sellable products available. Create a finished good to sell it.": "No hay productos para vender. Crea un producto terminado para poder venderlo.",
+  "From stock": "Desde stock",
+  "All units come from finished-goods stock. No production needed.": "Todas las unidades salen del stock de producto terminado. No hace falta fabricar.",
+  "In stock": "En stock",
+  "Use stock": "Servir desde stock",
+  "Use the stock first": "Primero sirve el pedido desde el stock",
+  "Order ready: served from stock": "Pedido listo: servido desde el stock",
+  "Stock reserved for this order": "Stock apartado para este pedido",
+  "Failed to use stock": "No se pudo usar el stock",
+  "Work orders are created only for the units that are missing.": "Las órdenes de trabajo se crean solo para las unidades que faltan.",
+  "Reserved from stock": "Apartado del stock",
+  "Order served from stock; no production needed": "Pedido servido desde el stock; no hace falta fabricar",
+  "Stock can only be used once the order is confirmed and before it ships; this order is confirmed.": "El stock solo se puede usar con el pedido confirmado y antes de entregarlo.",
+  "The units are reserved from stock and ready to ship.": "Las unidades están apartadas del stock y listas para enviar.",
+  "The units are reserved from stock. No carrier or tracking number needed.": "Las unidades están apartadas del stock. No hace falta transportista ni número de seguimiento."
  },
  "patterns": [
   [
@@ -5257,6 +5277,42 @@
   [
    "{0} idle",
    "{0} parada"
+  ],
+  [
+   "Available: {0} {1}",
+   "Disponibles: {0} {1}"
+  ],
+  [
+   "Quantity ({0})",
+   "Cantidad ({0})"
+  ],
+  [
+   "Stock updated: {0}",
+   "Stock actualizado: {0}"
+  ],
+  [
+   "There are only {0} {1} in stock.",
+   "Solo hay {0} {1} en stock."
+  ],
+  [
+   "Stock after the change: {0} {1}",
+   "Stock después del cambio: {0} {1}"
+  ],
+  [
+   "{0} unit(s) in stock. No production needed: use the stock and deliver.",
+   "{0} unidad(es) en stock. No hace falta fabricar: sirve el pedido desde el stock y entrégalo."
+  ],
+  [
+   "{0} from stock, {1} to make. {2}",
+   "{0} desde stock, {1} por fabricar. {2}"
+  ],
+  [
+   "{0} unit(s) taken from finished-goods stock",
+   "{0} unidad(es) tomadas del stock de producto terminado"
+  ],
+  [
+   "Stock can only be used once the order is confirmed and before it ships; this order is {0}.",
+   "El stock solo se puede usar con el pedido confirmado y antes de entregarlo; este pedido está {0}."
   ]
  ],
  "ignored": [

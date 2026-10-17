@@ -96,9 +96,17 @@ export default function OrderDetail() {
           )
           .map((po) => po.product_id)
       );
+      // PrintFlow: una línea que ya está apartada del stock no necesita orden
+      const stockReadyLineIds = new Set(
+        (stockCoverage?.lines || [])
+          .filter((l) => l.ready >= l.quantity && l.in_production === 0)
+          .map((l) => l.line_id)
+      );
       return productLines.every(
         (line) =>
-          woLineIds.has(line.id) || legacyCoveredProductIds.has(line.product_id)
+          woLineIds.has(line.id) ||
+          legacyCoveredProductIds.has(line.product_id) ||
+          stockReadyLineIds.has(line.id)
       );
     }
     if (order?.product_id) {
@@ -149,6 +157,9 @@ export default function OrderDetail() {
   const [downloadingInvoice, setDownloadingInvoice] = useState(false);
   const [creatingProduction, setCreatingProduction] = useState(false);
   const [deliveringOrder, setDeliveringOrder] = useState(false); // PrintFlow
+  // PrintFlow: cuánto del pedido se sirve con stock y cuánto hay que fabricar
+  const [stockCoverage, setStockCoverage] = useState(null);
+  const [usingStock, setUsingStock] = useState(false);
 
   const isBillingReleaseSatisfied = () => {
     const invoiceStatus = orderInvoice?.status || "";
@@ -464,6 +475,36 @@ export default function OrderDetail() {
     }
   };
 
+  const fetchStockCoverage = async ({ shouldApply = () => true } = {}) => {
+    if (!orderId) return;
+    try {
+      const data = await api.get(`/api/v1/sales-orders/${orderId}/stock-coverage`);
+      if (shouldApply()) setStockCoverage(data);
+    } catch {
+      if (shouldApply()) setStockCoverage(null);
+    }
+  };
+
+  // PrintFlow: apartar el stock que haya; si cubre todo, el pedido queda listo
+  // para entregar sin orden de trabajo.
+  const handleUseStock = async () => {
+    if (usingStock) return;
+    setUsingStock(true);
+    try {
+      const result = await api.post(`/api/v1/sales-orders/${orderId}/use-stock`);
+      toast.success(
+        result?.fully_covered
+          ? "Order ready: served from stock"
+          : "Stock reserved for this order"
+      );
+      await Promise.allSettled([fetchOrder(), refetchFulfillment(), fetchStockCoverage()]);
+    } catch (err) {
+      toast.error(err.message || "Failed to use stock");
+    } finally {
+      setUsingStock(false);
+    }
+  };
+
   // The FulfillmentProgress panel now renders its Ship CTA/reasons from canShip,
   // so a panel refresh must refresh the ship gate too — not just line readiness.
   const refreshFulfillmentPanel = async () => {
@@ -502,6 +543,7 @@ export default function OrderDetail() {
     if (!order) return undefined;
     let cancelled = false;
     void fetchCanShip({ shouldApply: () => !cancelled });
+    void fetchStockCoverage({ shouldApply: () => !cancelled });
     return () => {
       cancelled = true;
     };
@@ -544,6 +586,7 @@ export default function OrderDetail() {
         fetchPaymentData(),
         fetchOrderInvoice(),
         fetchCanShip(),
+        fetchStockCoverage(),
       ]);
       toast.success("Data refreshed");
     } catch {
@@ -567,10 +610,16 @@ export default function OrderDetail() {
         `/api/v1/sales-orders/${orderId}/generate-production-orders`
       );
 
-      toast.success("Production order created successfully!");
+      const servedFromStock = !result?.created_orders?.length && result?.from_stock;
+      if (!servedFromStock) toast.success("Production order created successfully!");
       // PrintFlow: esperar a tener la orden en pantalla antes de soltar el botón;
       // así pasa directamente a "Abrir orden de trabajo" y no se puede pulsar otra vez.
-      await Promise.all([fetchProductionOrders(), fetchOrder()]);
+      await Promise.all([fetchProductionOrders(), fetchOrder(), fetchStockCoverage()]);
+      if (servedFromStock) {
+        // PrintFlow: el stock lo cubría todo, no se ha creado ninguna orden
+        toast.success("Order ready: served from stock");
+        return;
+      }
 
       // SCHED-3b: offer the guided schedule wizard after release.
       // Remember WHICH orders this call created (by code) so the wizard
@@ -929,6 +978,9 @@ export default function OrderDetail() {
         onDeliverOrder={handleDeliverOrder}
         deliveringOrder={deliveringOrder}
         onCreateProductionOrder={handleCreateProductionOrder}
+        stockCoverage={stockCoverage}
+        onUseStock={handleUseStock}
+        usingStock={usingStock}
         onGenerateInvoice={handleGenerateInvoice}
         onDownloadInvoice={handleDownloadOrderInvoice}
         downloadingInvoice={downloadingInvoice}

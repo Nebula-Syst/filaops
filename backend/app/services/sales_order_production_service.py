@@ -414,6 +414,29 @@ def generate_production_orders(
             )
         )
 
+    # PrintFlow: primero se aparta el stock de producto terminado que haya;
+    # solo se fabrica lo que falte. Si el stock lo cubre todo, no se crea
+    # ninguna orden de trabajo y el pedido queda listo para entregar.
+    to_make_by_line: dict = {}
+    if order.order_type == "line_item":
+        from app.services.nebula_stock import reserve_stock
+
+        coverage = reserve_stock(db, order)
+        to_make_by_line = {
+            item["line_id"]: Decimal(str(item["to_make"])) for item in coverage["lines"]
+        }
+        stock_only = {
+            line_id for line_id, qty in to_make_by_line.items() if qty <= 0
+        }
+        covered_line_ids = covered_line_ids | stock_only
+        if coverage["fully_covered"]:
+            return {
+                "message": "Order served from stock; no production needed",
+                "existing_orders": [po.code for po in existing_pos],
+                "created_orders": [],
+                "from_stock": coverage["from_stock"],
+            }
+
     # Only enforce the billing gate when this call will actually release work.
     # A confirmed line_item order whose lines are all material-only (or already
     # covered) creates zero production orders — that no-op must not be turned
@@ -498,7 +521,8 @@ def generate_production_orders(
                 routing_id=routing.id if routing else None,
                 sales_order_id=order.id,
                 sales_order_line_id=line.id,
-                quantity_ordered=line.quantity,
+                # PrintFlow: solo lo que no cubre el stock
+                quantity_ordered=to_make_by_line.get(line.id, line.quantity),
                 quantity_completed=0,
                 quantity_scrapped=0,
                 source="sales_order",

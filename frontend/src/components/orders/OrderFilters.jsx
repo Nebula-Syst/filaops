@@ -10,7 +10,7 @@ const FILTER_OPTIONS = [
   { value: 'ready_to_ship', label: 'Ready to Ship', color: 'green' },
   { value: 'partially_ready', label: 'Partially Ready', color: 'yellow' },
   { value: 'blocked', label: 'Blocked', color: 'red' },
-  { value: 'shipped', label: 'Shipped', color: 'gray' },
+  { value: 'shipped', label: 'Shipped / Delivered', color: 'gray' },
 ];
 
 // Sort options with field:order format
