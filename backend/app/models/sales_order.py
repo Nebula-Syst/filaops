@@ -243,6 +243,8 @@ class SalesOrderLine(Base):
     total = Column(Numeric(10, 2), nullable=False)  # quantity * unit_price - discount + tax
     allocated_quantity = Column(Numeric(10, 2), nullable=True, default=0)
     shipped_quantity = Column(Numeric(10, 2), nullable=True, default=0)
+    # PrintFlow: parte de allocated_quantity que sale del stock (no fabricada)
+    stock_allocated_quantity = Column(Numeric(10, 2), nullable=False, default=0, server_default="0")
     original_quantity = Column(Numeric(10, 2), nullable=True)  # Pre-edit quantity (NULL = never edited)
     fulfillment_status = Column(String(20), nullable=True)  # null | "ready" | "short_closed"
 

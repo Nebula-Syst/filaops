@@ -697,6 +697,53 @@ async def get_order_can_ship(
     return sales_order_service.can_ship_reasons(db, order)
 
 
+@router.get("/{order_id}/stock-coverage")
+async def get_order_stock_coverage(
+    order_id: int,
+    current_user: User = Depends(get_current_staff_user),
+    db: Session = Depends(get_db),
+):
+    """PrintFlow: qué parte del pedido se sirve con stock y qué parte hay que fabricar."""
+    from app.services.nebula_stock import stock_coverage
+
+    order = (
+        db.query(SalesOrder)
+        .options(joinedload(SalesOrder.lines))
+        .filter(SalesOrder.id == order_id)
+        .first()
+    )
+    if not order:
+        raise HTTPException(status_code=404, detail=f"Sales order {order_id} not found")
+    return stock_coverage(db, order)
+
+
+@router.post("/{order_id}/use-stock")
+async def use_order_stock(
+    order_id: int,
+    current_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db),
+):
+    """PrintFlow: aparta el stock libre para el pedido.
+
+    Si cubre todo y no hay órdenes de trabajo abiertas, el pedido queda listo
+    para entregar sin fabricar nada.
+    """
+    from app.services.nebula_stock import reserve_stock
+
+    locked = (
+        db.query(SalesOrder)
+        .filter(SalesOrder.id == order_id)
+        .with_for_update()
+        .first()
+    )
+    if locked is None:
+        raise HTTPException(status_code=404, detail=f"Sales order {order_id} not found")
+    order = sales_order_service.get_sales_order(db, order_id)
+    coverage = reserve_stock(db, order, user_id=current_user.id)
+    db.commit()
+    return coverage
+
+
 class MaterialRequirementItem(BaseModel):
     """Single material requirement for a sales order."""
     product_id: int

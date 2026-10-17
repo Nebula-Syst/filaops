@@ -17,6 +17,7 @@ import {
 import { FormErrorSummary, RequiredIndicator } from "./ErrorMessage";
 import { ITEM_TYPES } from "./item-wizard/constants";
 import Modal from "./Modal";
+import StockAdjuster from "../nebula/StockAdjuster"; // PrintFlow
 
 const PROCUREMENT_TYPES = [
   { value: "make", label: "Make (Manufactured)" },
@@ -63,6 +64,7 @@ export default function ItemForm({
   onClose,
   onSuccess,
   editingItem = null,
+  onStockChange, // PrintFlow: refrescar la lista tras ajustar stock
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -273,6 +275,15 @@ export default function ItemForm({
           )}
 
           <FormErrorSummary errors={errors} className="mb-4" />
+
+          {/* PrintFlow: añadir/quitar unidades sin salir de la ficha */}
+          {editingItem && !editingItem.is_template && (
+            <StockAdjuster
+              key={editingItem.id}
+              item={editingItem}
+              onAdjusted={() => onStockChange?.()}
+            />
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Basic Info */}

@@ -37,7 +37,10 @@ def get_fulfillment_status(db: Session, order_id: int) -> Optional[FulfillmentSt
         return None
 
     # Handle already-terminal states
-    if order.status == "shipped":
+    # PrintFlow: entregados en mano / recogidos ("delivered") y cerrados
+    # ("completed") también han salido; antes se recalculaban y salían
+    # "Listo para enviar" en la lista de pedidos.
+    if order.status in ("shipped", "delivered", "completed"):
         return _build_shipped_status(db, order)
     if order.status == "cancelled":
         return _build_cancelled_status(db, order)

@@ -333,7 +333,9 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
   const fetchProducts = async () => {
     try {
       const res = await fetch(
-        `${API_URL}/api/v1/products?limit=500&active_only=true`,
+        // PrintFlow: /products cortaba en 500 artículos (los productos nuevos
+        // quedaban fuera) y no dice el tipo; /items sí y admite 2000.
+        `${API_URL}/api/v1/items?limit=2000&active_only=true&exclude_variants=false`,
         {
           credentials: "include",
         }
@@ -586,7 +588,7 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
           product: product,
           material: null,
           quantity: 1,
-          unit_price: product.selling_price || 0,
+          unit_price: parseFloat(product.selling_price) || 0, // /items lo devuelve como texto
           _key: `product-${product.id}`,
         },
       ]);

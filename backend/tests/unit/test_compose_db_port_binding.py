@@ -12,6 +12,24 @@ from pathlib import Path
 import pytest
 import yaml
 
+
+# PrintFlow: el docker-compose.override.yml de despliegue usa las etiquetas de
+# Compose !reset / !override, que el cargador seguro de PyYAML no conoce.
+class _ComposeLoader(yaml.SafeLoader):
+    pass
+
+
+def _compose_tag(loader, node):
+    if isinstance(node, yaml.SequenceNode):
+        return loader.construct_sequence(node)
+    if isinstance(node, yaml.MappingNode):
+        return loader.construct_mapping(node)
+    return loader.construct_scalar(node)
+
+
+for _tag in ("!reset", "!override"):
+    _ComposeLoader.add_constructor(_tag, _compose_tag)
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 _SKIP_DIRS = {".git", ".github", "node_modules", "venv", ".venv", "site"}
 _COMPOSE_NAME = re.compile(r"^(docker-)?compose([.-][\w.-]+)?\.ya?ml$")
@@ -115,7 +133,7 @@ def test_compose_files_are_found():
     ids=lambda p: p.relative_to(REPO_ROOT).as_posix(),
 )
 def test_db_service_binds_only_to_loopback(compose_file):
-    config = yaml.safe_load(compose_file.read_text(encoding="utf-8")) or {}
+    config = yaml.load(compose_file.read_text(encoding="utf-8"), Loader=_ComposeLoader) or {}
     problems = []
     for name, service in (config.get("services") or {}).items():
         problems.extend(_db_service_problems(name, service or {}))

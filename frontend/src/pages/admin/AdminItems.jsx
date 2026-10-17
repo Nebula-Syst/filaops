@@ -688,6 +688,7 @@ export default function AdminItems() {
           fetchStats();
         }}
         editingItem={editingItem}
+        onStockChange={fetchItems}
       />
 
       {/* Material Form */}

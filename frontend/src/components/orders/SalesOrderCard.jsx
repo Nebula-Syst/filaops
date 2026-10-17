@@ -14,6 +14,9 @@ const STATUS_STYLES = {
   shipped: 'bg-gray-100 text-gray-600',
   cancelled: 'bg-gray-100 text-gray-400',
   pending_confirmation: 'bg-purple-100 text-purple-800',
+  delivered: 'bg-green-100 text-green-800',
+  picked_up: 'bg-green-100 text-green-800',
+  completed: 'bg-green-100 text-green-800',
 };
 
 // Human-readable labels for fulfillment states
@@ -24,6 +27,15 @@ const STATUS_LABELS = {
   shipped: 'Shipped',
   cancelled: 'Cancelled',
   pending_confirmation: 'Pending Review',
+  delivered: 'Delivered',
+  picked_up: 'Picked Up',
+  completed: 'Completed',
+};
+
+// PrintFlow: estados finales del pedido → etiqueta de la tarjeta
+const DONE_STATUSES = {
+  delivered: (order) => (order.delivery_method === 'pickup' ? 'picked_up' : 'delivered'),
+  completed: () => 'completed',
 };
 
 // Source badge styles
@@ -75,7 +87,12 @@ function getProgressColor(percent) {
 export default function SalesOrderCard({ order, onViewDetails, onShip }) {
   const { fulfillment } = order;
   // Use pending_confirmation status directly if that's the order status
-  const state = order.status === 'pending_confirmation' ? 'pending_confirmation' : (fulfillment?.state || 'blocked');
+  // PrintFlow: entregados en mano / recogidos / cerrados con su propia etiqueta
+  const state = order.status === 'pending_confirmation'
+    ? 'pending_confirmation'
+    : DONE_STATUSES[order.status]
+    ? DONE_STATUSES[order.status](order)
+    : (fulfillment?.state || 'blocked');
   const canShip = fulfillment?.can_ship_complete || fulfillment?.can_ship_partial;
   const percent = fulfillment?.fulfillment_percent ?? 0;
 

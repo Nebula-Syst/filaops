@@ -49,6 +49,9 @@ export default function OrderWorkflowPanel({
   onDeliverOrder,
   deliveringOrder,
   onCreateProductionOrder,
+  stockCoverage,
+  onUseStock,
+  usingStock,
   onGenerateInvoice,
   onDownloadInvoice,
   downloadingInvoice,
@@ -92,7 +95,13 @@ export default function OrderWorkflowPanel({
   const getShipBlockReason = () => {
     if (!order) return "Order is still loading";
     if (SHIPPED_ORDER_STATUSES.has(order.status)) return "Order already shipped";
-    if (productionOrders.length === 0) return "Create production order first";
+    // PrintFlow: servido desde stock, sin órdenes de trabajo
+    if (productionOrders.length === 0 && order.status === "ready_to_ship") return "";
+    if (productionOrders.length === 0) {
+      return stockCoverage?.stock_covers_all
+        ? "Use the stock first"
+        : "Create production order first";
+    }
     if (!getProductionComplete()) return "Production must be complete";
     if (materialRequirements.some((req) => req.net_shortage > 0)) {
       return "Material shortages must be resolved";
@@ -162,13 +171,21 @@ export default function OrderWorkflowPanel({
     const hasPayment = Number(paymentSummary?.total_paid || 0) > 0;
     const billingReleased = isBillingReleaseSatisfied();
     const productionReleased = hasMainProductWO();
-    const productionComplete = getProductionComplete();
+    // PrintFlow: un pedido servido desde stock está listo aunque no tenga órdenes
+    const productionComplete = getProductionComplete() || status === "ready_to_ship";
     const shipped = SHIPPED_ORDER_STATUSES.has(status);
     // LEGACY-1: "done" requires evidence, not just a status claim.
     const shipmentEvidence = hasShipmentEvidence();
     const legacyMismatch = shipped && !shipmentEvidence;
     const noProductionNeeded = !hasOrderProduct();
     const releaseBlockReason = getProductionReleaseBlockReason();
+    // PrintFlow: stock de producto terminado
+    const activeWorkOrders = productionOrders.filter((po) => po.status !== "cancelled");
+    const servedFromStock =
+      Boolean(stockCoverage?.fully_covered) && activeWorkOrders.length === 0;
+    const stockOffer =
+      !productionReleased && Boolean(stockCoverage?.can_reserve) ? stockCoverage : null;
+    const fmtQty = (n) => Number(n || 0).toLocaleString();
     const shipBlockReason = getShipBlockReason();
     // PrintFlow: entrega en mano / recogida se cierran aquí mismo, sin pasar
     // por la pantalla de envíos (no hay transportista ni etiqueta)
@@ -258,7 +275,32 @@ export default function OrderWorkflowPanel({
           : "Create the invoice or record a payment before production.",
         action: billingAction,
       },
-      {
+      // PrintFlow: todo sale del stock → no hace falta fabricar
+      servedFromStock && !noProductionNeeded
+        ? {
+            id: "production",
+            title: "Production Orders",
+            Icon: Factory,
+            state: "done",
+            meta: "From stock",
+            detail: "All units come from finished-goods stock. No production needed.",
+            action: null,
+          }
+        : stockOffer && stockOffer.stock_covers_all && !noProductionNeeded
+        ? {
+            id: "production",
+            title: "Production Orders",
+            Icon: Factory,
+            state: "active",
+            meta: "In stock",
+            detail: `${fmtQty(stockOffer.from_stock)} unit(s) in stock. No production needed: use the stock and deliver.`,
+            action: {
+              label: usingStock ? "Saving..." : "Use stock",
+              onClick: onUseStock,
+              disabled: usingStock,
+            },
+          }
+        : {
         id: "production",
         title: "Production Orders",
         Icon: Factory,
@@ -276,6 +318,10 @@ export default function OrderWorkflowPanel({
           ? "No production release is required for service-only lines."
           : productionReleased
           ? "Work orders are created and linked. Open production to release, start, and complete them."
+          : stockOffer
+          ? `${fmtQty(stockOffer.from_stock)} from stock, ${fmtQty(stockOffer.to_make)} to make. ${
+              releaseBlockReason || "Work orders are created only for the units that are missing."
+            }`
           : releaseBlockReason || "Ready to create work orders.",
         action: productionReleased && productionOrders.length > 0
           ? {
@@ -317,7 +363,11 @@ export default function OrderWorkflowPanel({
             ? "Shipment is already in progress or complete."
             : "The order has been handed over to the customer."
           : shipBlockReason ||
-            (ships
+            (servedFromStock
+              ? ships
+                ? "The units are reserved from stock and ready to ship."
+                : "The units are reserved from stock. No carrier or tracking number needed."
+              : ships
               ? "Production is complete and materials are clear."
               : "Production is complete. No carrier or tracking number needed."),
         // PrintFlow: un pedido marcado "envío" que al final se recoge o se
