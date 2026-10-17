@@ -20,6 +20,24 @@ from pathlib import PurePosixPath
 import pytest
 import yaml
 
+
+# PrintFlow: el docker-compose.override.yml de despliegue usa las etiquetas de
+# Compose !reset / !override, que el cargador seguro de PyYAML no conoce.
+class _ComposeLoader(yaml.SafeLoader):
+    pass
+
+
+def _compose_tag(loader, node):
+    if isinstance(node, yaml.SequenceNode):
+        return loader.construct_sequence(node)
+    if isinstance(node, yaml.MappingNode):
+        return loader.construct_mapping(node)
+    return loader.construct_scalar(node)
+
+
+for _tag in ("!reset", "!override"):
+    _ComposeLoader.add_constructor(_tag, _compose_tag)
+
 from tests.unit.test_compose_db_port_binding import REPO_ROOT, _compose_files
 
 DEFAULT_CONFIG_DIR = "/var/lib/filaops/config"
@@ -136,7 +154,7 @@ def test_stock_compose_backend_is_checked():
     """Guard the detector: if it stopped recognising the stock backend
     service, the check below would pass without checking anything."""
     compose_file = REPO_ROOT / "docker-compose.yml"
-    services = yaml.safe_load(compose_file.read_text(encoding="utf-8"))["services"]
+    services = yaml.load(compose_file.read_text(encoding="utf-8"), Loader=_ComposeLoader)["services"]
     checked = {name for name, svc in services.items() if _runs_backend(svc or {}, compose_file)}
     assert checked == {"backend"}
 
@@ -147,7 +165,7 @@ def test_stock_compose_backend_is_checked():
     ids=lambda p: p.relative_to(REPO_ROOT).as_posix(),
 )
 def test_backend_config_dir_is_persisted(compose_file):
-    config = yaml.safe_load(compose_file.read_text(encoding="utf-8")) or {}
+    config = yaml.load(compose_file.read_text(encoding="utf-8"), Loader=_ComposeLoader) or {}
     top_level_volumes = config.get("volumes") or {}
     problems = []
     for name, service in (config.get("services") or {}).items():
