@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { API_URL } from "../config/api";
 import { getLanguage } from "./i18n";
+import { formatSize } from "./files";
 
 /**
  * PrintFlow: archivos de impresión (3MF, STL, gcode…) de un artículo.
@@ -9,15 +10,8 @@ import { getLanguage } from "./i18n";
  * suben aquí y se descargan desde la ficha o desde la orden de trabajo, sin
  * tener que buscarlos en el ordenador.
  */
-export const ACCEPTED = ".3mf,.stl,.obj,.step,.stp,.gcode,.gco,.bgcode,.zip,.pdf,.png,.jpg,.jpeg";
+const ACCEPTED = ".3mf,.stl,.obj,.step,.stp,.gcode,.gco,.bgcode,.zip,.pdf,.png,.jpg,.jpeg";
 const MAX_MB = 100;
-
-export const formatSize = (bytes) => {
-  if (!bytes && bytes !== 0) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
 
 function upload(itemId, files, onProgress) {
   return new Promise((resolve, reject) => {

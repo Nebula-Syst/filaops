@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../config/api";
-import { formatSize } from "./ProductFiles";
+import { formatSize } from "./files";
 
 /**
  * PrintFlow: archivos de impresión del artículo en su orden de trabajo, para
