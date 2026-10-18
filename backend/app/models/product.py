@@ -89,6 +89,8 @@ class Product(Base):
 
     # 3D Printing
     gcode_file_path = Column(String(500), nullable=True)  # Path to GCODE file
+    # PrintFlow: piezas que caben en una cama; con valor, el precio se calcula por camas
+    units_per_bed = Column(Integer, nullable=True)
 
     # Product Image
     image_url = Column(String(500), nullable=True)  # URL to product image

@@ -143,3 +143,41 @@ describe('ImportItemsModal', () => {
     expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/items/nebula/import?update_existing=true')
   })
 })
+
+describe('precio por camas', () => {
+  const product = { selling_price: '39' }
+  const pricing = {
+    units_per_bed: 4,
+    tiers: [
+      { min_quantity: 2, unit_price: 30 },
+      { min_quantity: 3, unit_price: 27 },
+      { min_quantity: 4, unit_price: 25 },
+    ],
+  }
+  it('reparte en camas llenas y una con el resto', async () => {
+    const { totalFor, priceBreakdown, bedHint } = await import('../pricing')
+    expect([1, 2, 3, 4, 5, 7, 8, 10].map((q) => totalFor(product, pricing, q))).toEqual([39, 60, 81, 100, 139, 181, 200, 260])
+    expect(priceBreakdown(product, pricing, 5).map((p) => [p.quantity, p.unit_price])).toEqual([[4, 25], [1, 39]])
+    expect(bedHint(product, pricing, 7)).toBe('4 × 25.00 + 3 × 27.00 (4 per bed)')
+    expect(tierPrice(product, pricing, 5)).toBeCloseTo(27.8)
+  })
+
+  it('el editor guarda las piezas por cama y enseña ejemplos', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((url, opts) => {
+      if (opts?.method === 'PUT') {
+        const body = JSON.parse(opts.body)
+        return json({ units_per_bed: body.units_per_bed, tiers: body.tiers })
+      }
+      return json({ base_price: 39, units_per_bed: null, tiers: pricing.tiers })
+    })
+    render(<PriceTiersEditor item={{ id: 1, selling_price: '39' }} />)
+    await screen.findAllByDisplayValue('30')
+    fireEvent.change(screen.getByLabelText(/Pieces per bed/), { target: { value: '4' } })
+    expect(screen.getByText(/Bed with 1:/)).toBeInTheDocument()
+    expect(screen.getByText(/Order of 5:/).textContent).toMatch(/139/)
+    fireEvent.click(screen.getByText('Save prices'))
+    await screen.findByText('Quantity prices saved')
+    const put = fetchMock.mock.calls.find(([, o]) => o?.method === 'PUT')
+    expect(JSON.parse(put[1].body).units_per_bed).toBe(4)
+  })
+})

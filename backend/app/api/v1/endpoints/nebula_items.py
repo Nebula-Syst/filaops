@@ -24,7 +24,8 @@ from app.models.product import Product
 from app.models.user import User
 from app.services import nebula_import
 from app.services.nebula_pricing import (
-    list_tiers, price_for_quantity, replace_tiers, tier_to_dict, tiers_by_product,
+    list_tiers, price_breakdown, price_for_quantity, pricing_by_product, replace_tiers,
+    tier_to_dict, tiers_by_product,
 )
 
 router = APIRouter()
@@ -59,6 +60,25 @@ class PriceTierIn(BaseModel):
 
 class PriceTiersIn(BaseModel):
     tiers: List[PriceTierIn]
+    # Piezas por cama; sin enviar se deja como está, null lo quita
+    units_per_bed: Optional[int] = Field(None, ge=1, le=10000)
+
+
+def _ids(ids: Optional[str]) -> Optional[list[int]]:
+    if not ids:
+        return None
+    try:
+        return [int(x) for x in ids.split(",") if x.strip()]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ids no válidos")
+
+
+def _pricing_response(db: Session, product: Product, tiers) -> dict:
+    return {
+        "base_price": float(product.selling_price) if product.selling_price is not None else None,
+        "units_per_bed": product.units_per_bed,
+        "tiers": [tier_to_dict(t) for t in tiers],
+    }
 
 
 @router.get("/nebula/price-tiers")
@@ -68,13 +88,17 @@ def all_price_tiers(
     current_user: User = Depends(get_current_staff_user),
 ):
     """Tramos de varios artículos: {product_id: [tramos]}."""
-    product_ids = None
-    if ids:
-        try:
-            product_ids = [int(x) for x in ids.split(",") if x.strip()]
-        except ValueError:
-            raise HTTPException(status_code=400, detail="ids no válidos")
-    return {str(k): v for k, v in tiers_by_product(db, product_ids).items()}
+    return {str(k): v for k, v in tiers_by_product(db, _ids(ids)).items()}
+
+
+@router.get("/nebula/pricing")
+def all_pricing(
+    ids: Optional[str] = Query(None, description="IDs separados por comas; vacío = todos"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_staff_user),
+):
+    """Precios de varios artículos: {product_id: {units_per_bed, tiers}}."""
+    return {str(k): v for k, v in pricing_by_product(db, _ids(ids)).items()}
 
 
 @router.get("/{item_id}/price-tiers")
@@ -84,10 +108,7 @@ def get_price_tiers(
     current_user: User = Depends(get_current_staff_user),
 ):
     product = _product(db, item_id)
-    return {
-        "base_price": float(product.selling_price) if product.selling_price is not None else None,
-        "tiers": [tier_to_dict(t) for t in list_tiers(db, item_id)],
-    }
+    return _pricing_response(db, product, list_tiers(db, item_id))
 
 
 @router.put("/{item_id}/price-tiers")
@@ -100,11 +121,10 @@ def put_price_tiers(
     """Sustituye todos los tramos del artículo (lista vacía = quitarlos)."""
     product = _product(db, item_id)
     tiers = replace_tiers(db, product, [t.model_dump() for t in body.tiers])
+    if "units_per_bed" in body.model_fields_set:
+        product.units_per_bed = body.units_per_bed
     db.commit()
-    return {
-        "base_price": float(product.selling_price) if product.selling_price is not None else None,
-        "tiers": [tier_to_dict(t) for t in tiers],
-    }
+    return _pricing_response(db, product, tiers)
 
 
 @router.get("/{item_id}/price")
@@ -115,7 +135,17 @@ def get_price_for_quantity(
     current_user: User = Depends(get_current_staff_user),
 ):
     product = _product(db, item_id)
-    return {"quantity": quantity, "unit_price": float(price_for_quantity(db, product, quantity))}
+    parts = price_breakdown(db, product, quantity)
+    return {
+        "quantity": quantity,
+        "unit_price": float(price_for_quantity(db, product, quantity)),
+        "total": float(sum(p["quantity"] * p["unit_price"] for p in parts)),
+        "parts": [
+            {"quantity": float(p["quantity"]), "unit_price": float(p["unit_price"]),
+             "beds": p["beds"], "bed_size": p["bed_size"], "full": p["full"]}
+            for p in parts
+        ],
+    }
 
 
 # ---------------------------------------------------------------------------

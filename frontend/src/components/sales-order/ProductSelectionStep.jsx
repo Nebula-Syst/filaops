@@ -393,6 +393,10 @@ export default function ProductSelectionStep({
                         : li.product?.sku}
                     </div>
                   )}
+                  {/* PrintFlow: reparto en camas cuando el precio va por camas */}
+                  {li._bedHint && (
+                    <div className="text-blue-300 text-xs">{li._bedHint}</div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="text-gray-400 text-sm">

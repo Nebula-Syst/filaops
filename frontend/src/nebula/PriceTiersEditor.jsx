@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../config/api";
 import { formatCurrency } from "../lib/number";
+import { totalFor } from "./pricing";
 
 /**
  * PrintFlow: precios por cantidad de un artículo.
@@ -9,6 +10,10 @@ import { formatCurrency } from "../lib/number";
  * se fijan tramos "desde N unidades → precio por unidad". Por debajo del primer
  * tramo se cobra el precio de venta normal. Los pedidos nuevos (y la tienda
  * online) toman el precio del tramo según la cantidad.
+ *
+ * Con "piezas por cama" el precio va por camas: el pedido se reparte en camas
+ * llenas más una con el resto, y los tramos son el precio por pieza según
+ * cuántas van en la cama (1 sola sale más cara: la purga se reparte entre menos).
  */
 const num = (v) => {
   const n = parseFloat(String(v ?? "").replace(",", "."));
@@ -25,6 +30,8 @@ const toRows = (tiers) =>
 export default function PriceTiersEditor({ item }) {
   const [rows, setRows] = useState([]);
   const [saved, setSaved] = useState([]);
+  const [perBed, setPerBed] = useState("");
+  const [savedPerBed, setSavedPerBed] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -38,6 +45,8 @@ export default function PriceTiersEditor({ item }) {
         if (cancelled) return;
         setRows(toRows(data.tiers || []));
         setSaved(toRows(data.tiers || []));
+        setPerBed(data.units_per_bed ? String(data.units_per_bed) : "");
+        setSavedPerBed(data.units_per_bed ? String(data.units_per_bed) : "");
       })
       .catch((err) => !cancelled && setError(err.message))
       .finally(() => !cancelled && setLoading(false));
@@ -47,7 +56,9 @@ export default function PriceTiersEditor({ item }) {
   }, [item.id]);
 
   const base = num(item.selling_price);
-  const dirty = JSON.stringify(rows) !== JSON.stringify(saved);
+  const bed = parseInt(perBed, 10) > 0 ? parseInt(perBed, 10) : null;
+  const perBedInvalid = perBed !== "" && !bed;
+  const dirty = JSON.stringify(rows) !== JSON.stringify(saved) || perBed !== savedPerBed;
 
   const problems = rows.map((r, i) => {
     const q = num(r.min_quantity);
@@ -55,9 +66,10 @@ export default function PriceTiersEditor({ item }) {
     if (q === null || q < 1) return "Quantity must be 1 or more";
     if (p === null || p < 0) return "Enter a price";
     if (rows.some((o, j) => j !== i && num(o.min_quantity) === q)) return "Repeated quantity";
+    if (bed && q > bed) return "More pieces than fit in a bed";
     return null;
   });
-  const invalid = problems.some(Boolean);
+  const invalid = problems.some(Boolean) || perBedInvalid;
 
   const update = (i, field, value) => {
     setDone(false);
@@ -90,6 +102,7 @@ export default function PriceTiersEditor({ item }) {
             unit_price: num(r.unit_price),
             label: r.label.trim() || null,
           })),
+          units_per_bed: bed,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -98,6 +111,8 @@ export default function PriceTiersEditor({ item }) {
       }
       setRows(toRows(data.tiers));
       setSaved(toRows(data.tiers));
+      setPerBed(data.units_per_bed ? String(data.units_per_bed) : "");
+      setSavedPerBed(data.units_per_bed ? String(data.units_per_bed) : "");
       setDone(true);
     } catch (err) {
       setError(err.message);
@@ -110,6 +125,13 @@ export default function PriceTiersEditor({ item }) {
     .map((r) => ({ q: num(r.min_quantity), p: num(r.unit_price) }))
     .filter((r) => r.q !== null && r.p !== null)
     .sort((a, b) => a.q - b.q);
+
+  // Vista previa por camas: precio por pieza según cuántas van en la cama y
+  // algunos pedidos de ejemplo
+  const pricing = { units_per_bed: bed, tiers: sorted.map((r) => ({ min_quantity: r.q, unit_price: r.p })) };
+  const product = { selling_price: base };
+  const fills = bed && bed <= 12 ? Array.from({ length: bed }, (_, i) => i + 1) : bed ? [1, bed] : [];
+  const examples = bed ? [...new Set([bed + 1, bed * 2 + Math.max(1, Math.floor(bed / 2)), bed * 5])] : [];
 
   return (
     <section aria-label="Quantity prices" className="rounded-xl border border-gray-700 bg-gray-800/50 p-4">
@@ -130,6 +152,30 @@ export default function PriceTiersEditor({ item }) {
         </button>
       </div>
 
+      {!loading && (
+        <label className="mb-3 flex flex-wrap items-center gap-2 text-sm text-gray-300">
+          Pieces per bed
+          <input
+            type="number"
+            inputMode="numeric"
+            min="1"
+            step="1"
+            value={perBed}
+            placeholder="—"
+            onChange={(e) => {
+              setDone(false);
+              setPerBed(e.target.value);
+            }}
+            className="w-20 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-white focus:border-blue-500 focus:outline-none"
+          />
+          <span className="text-xs text-gray-400">
+            {bed
+              ? "Orders are split into full beds plus one with the rest. Tiers = price per piece by how many go in the bed."
+              : "Optional. Fill it in if the price depends on how many pieces share a bed."}
+          </span>
+        </label>
+      )}
+
       {loading ? (
         <p className="text-sm text-gray-400">Loading...</p>
       ) : rows.length === 0 ? (
@@ -143,7 +189,7 @@ export default function PriceTiersEditor({ item }) {
           {rows.map((row, i) => (
             <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 sm:grid-cols-[1fr_1fr_1.5fr_auto]">
               <label className="block text-xs text-gray-400">
-                From (units)
+                {bed ? "Pieces in the bed" : "From (units)"}
                 <input
                   type="number"
                   inputMode="numeric"
@@ -188,7 +234,23 @@ export default function PriceTiersEditor({ item }) {
               {problems[i] && <p className="col-span-full text-xs text-red-400">{problems[i]}</p>}
             </div>
           ))}
-          {sorted.length > 0 && !invalid && (
+          {bed && !invalid && base !== null && (
+            <div className="mt-2 grid gap-3 text-xs text-gray-400 sm:grid-cols-2">
+              <ul className="space-y-0.5">
+                {fills.map((k) => (
+                  <li key={k}>
+                    {`Bed with ${k}: ${formatCurrency(totalFor(product, pricing, k) / k)} each · ${formatCurrency(totalFor(product, pricing, k))}`}
+                  </li>
+                ))}
+              </ul>
+              <ul className="space-y-0.5">
+                {examples.map((q) => (
+                  <li key={q}>{`Order of ${q}: ${formatCurrency(totalFor(product, pricing, q))}`}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {!bed && sorted.length > 0 && !invalid && (
             <ul className="mt-2 space-y-0.5 text-xs text-gray-400">
               {base !== null && sorted[0].q > 1 && (
                 <li>{`1 – ${sorted[0].q - 1} units: ${formatCurrency(base)} each`}</li>

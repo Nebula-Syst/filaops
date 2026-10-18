@@ -6,7 +6,7 @@ import CustomerSelectionStep from "./sales-order/CustomerSelectionStep";
 import ProductSelectionStep from "./sales-order/ProductSelectionStep";
 import ReviewStep from "./sales-order/ReviewStep";
 import { needsShipping } from "../nebula/delivery";
-import { tierPrice } from "../nebula/pricing"; // PrintFlow
+import { bedHint, tierPrice } from "../nebula/pricing"; // PrintFlow
 
 // Item type options
 const ITEM_TYPES = [
@@ -95,7 +95,7 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
 
   // Line items state
   const [lineItems, setLineItems] = useState([]);
-  const [priceTiers, setPriceTiers] = useState({}); // PrintFlow: {product_id: [tramos]}
+  const [priceTiers, setPriceTiers] = useState({}); // PrintFlow: {product_id: {units_per_bed, tiers}}
 
   // Product search state
   const [productSearch, setProductSearch] = useState("");
@@ -346,8 +346,8 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
         const data = await res.json();
         setProducts(data.items || data || []);
       }
-      // PrintFlow: precios por cantidad de todos los artículos
-      const tiersRes = await fetch(`${API_URL}/api/v1/items/nebula/price-tiers`, {
+      // PrintFlow: precios por cantidad / por cama de todos los artículos
+      const tiersRes = await fetch(`${API_URL}/api/v1/items/nebula/pricing`, {
         credentials: "include",
       });
       if (tiersRes.ok) setPriceTiers(await tiersRes.json());
@@ -596,6 +596,7 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
           material: null,
           quantity: 1,
           unit_price: tierPrice(product, priceTiers[product.id], 1), // /items lo devuelve como texto
+          _bedHint: bedHint(product, priceTiers[product.id], 1),
           _key: `product-${product.id}`,
         },
       ]);
@@ -656,10 +657,15 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
 
   // PrintFlow: al cambiar la cantidad, el precio sigue los tramos del artículo
   // salvo que se haya escrito a mano
-  const withTierPrice = (li) =>
-    li.line_type === "product" && !li._priceManual
-      ? { ...li, unit_price: tierPrice(li.product, priceTiers[li.product_id], li.quantity) }
-      : li;
+  const withTierPrice = (li) => {
+    if (li.line_type !== "product" || li._priceManual) return { ...li, _bedHint: null };
+    const pricing = priceTiers[li.product_id];
+    return {
+      ...li,
+      unit_price: Math.round(tierPrice(li.product, pricing, li.quantity) * 10000) / 10000,
+      _bedHint: bedHint(li.product, pricing, li.quantity),
+    };
+  };
 
   // Update line item quantity
   const updateLineQuantity = (key, quantity) => {
@@ -1106,11 +1112,14 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
               unit_price: li.unit_price,
             };
           }
+          // PrintFlow: con precio por camas, sin precio a mano lo calcula el
+          // servidor y parte la línea (camas llenas + la del resto)
+          const byBed = priceTiers[li.product_id]?.units_per_bed && !li._priceManual;
           return {
             line_type: "product",
             product_id: li.product_id,
             quantity: li.quantity,
-            unit_price: li.unit_price,
+            unit_price: byBed ? undefined : li.unit_price,
           };
         }),
         source: "manual",
