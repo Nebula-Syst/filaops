@@ -185,3 +185,92 @@ class TestSpanishImport:
         )
         assert res.status_code == 200, res.text
         assert res.json()["created"] == 2
+
+
+class TestBedPricing:
+    """Nazareno: 4 por cama; por pieza 39 (sola), 30 (2), 27 (3), 25 (cama llena)."""
+
+    def _nazareno(self, db, make_product):
+        product = make_product(selling_price=Decimal("39"), units_per_bed=4)
+        replace_tiers(db, product, _tiers(product, (2, "30"), (3, "27"), (4, "25")))
+        return product
+
+    def test_breakdown_by_beds(self, db, make_product):
+        from app.services.nebula_pricing import price_breakdown
+
+        product = self._nazareno(db, make_product)
+        total = lambda q: sum(p["quantity"] * p["unit_price"] for p in price_breakdown(db, product, q))
+        assert total(1) == Decimal("39")
+        assert total(2) == Decimal("60")
+        assert total(3) == Decimal("81")
+        assert total(4) == Decimal("100")
+        assert total(5) == Decimal("139")   # 4×25 + 1×39
+        assert total(7) == Decimal("181")   # 4×25 + 3×27
+        assert total(8) == Decimal("200")
+        assert total(10) == Decimal("260")  # 8×25 + 2×30
+        assert price_for_quantity(db, product, 5) == Decimal("27.8")
+
+    def test_order_splits_lines_by_bed(self, db, make_product):
+        product = self._nazareno(db, make_product)
+        order = sales_order_service.create_sales_order(
+            db, customer_id=None, lines=[{"product_id": product.id, "quantity": 7}],
+            created_by_user_id=1,
+        )
+        lines = (
+            db.query(SalesOrderLine).filter_by(sales_order_id=order.id)
+            .order_by(SalesOrderLine.id).all()
+        )
+        assert [(l.quantity, l.unit_price, l.notes) for l in lines] == [
+            (Decimal("4"), Decimal("25"), "1 cama completa (4 por cama)"),
+            (Decimal("3"), Decimal("27"), "1 cama con 3"),
+        ]
+        assert order.total_price == Decimal("181.00")
+
+    def test_full_beds_only_is_one_line(self, db, make_product):
+        product = self._nazareno(db, make_product)
+        order = sales_order_service.create_sales_order(
+            db, customer_id=None, lines=[{"product_id": product.id, "quantity": 8}],
+            created_by_user_id=1,
+        )
+        lines = db.query(SalesOrderLine).filter_by(sales_order_id=order.id).all()
+        assert len(lines) == 1
+        assert lines[0].notes == "2 camas completas (4 por cama)"
+        assert order.total_price == Decimal("200.00")
+
+    def test_endpoints(self, client, db, make_product):
+        product = make_product(selling_price=Decimal("39"))
+        res = client.put(
+            f"/api/v1/items/{product.id}/price-tiers",
+            json={"units_per_bed": 4, "tiers": [
+                {"min_quantity": 2, "unit_price": 30}, {"min_quantity": 3, "unit_price": 27},
+                {"min_quantity": 4, "unit_price": 25}]},
+        )
+        assert res.status_code == 200, res.text
+        assert res.json()["units_per_bed"] == 4
+
+        res = client.get(f"/api/v1/items/{product.id}/price", params={"quantity": 5})
+        assert res.json()["total"] == 139
+        assert [p["quantity"] for p in res.json()["parts"]] == [4, 1]
+
+        pricing = client.get("/api/v1/items/nebula/pricing", params={"ids": str(product.id)}).json()
+        assert pricing[str(product.id)]["units_per_bed"] == 4
+        assert len(pricing[str(product.id)]["tiers"]) == 3
+
+        # Sin enviar units_per_bed se mantiene; con null se quita
+        client.put(f"/api/v1/items/{product.id}/price-tiers", json={"tiers": []})
+        db.refresh(product)
+        assert product.units_per_bed == 4
+        client.put(f"/api/v1/items/{product.id}/price-tiers", json={"tiers": [], "units_per_bed": None})
+        db.refresh(product)
+        assert product.units_per_bed is None
+
+    def test_import_per_bed(self, db):
+        csv = (
+            "sku;nombre;precio;piezas_por_cama;precio_desde_2;precio_desde_3;precio_desde_4\n"
+            "NAZ-CAMA-1;Nazareno;39;4;30;27;25\n"
+        ).encode()
+        result = nebula_import.import_items(db, csv)
+        assert result["created"] == 1, result
+        product = db.query(Product).filter_by(sku="NAZ-CAMA-1").one()
+        assert product.units_per_bed == 4
+        assert price_for_quantity(db, product, 4) == Decimal("25")

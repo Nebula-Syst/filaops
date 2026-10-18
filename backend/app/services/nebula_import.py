@@ -7,7 +7,9 @@ Prepara el fichero para el importador de FilaOps (``import_items_from_csv``):
 - pasa los números con coma decimal ("3,50") a punto, que el importador de
   FilaOps quitaría la coma y leería 350;
 - lee los precios por cantidad: columnas ``precio_desde_4``, ``precio_200``… o
-  una columna ``tramos`` con ``4=3,50 | 200=1,20``.
+  una columna ``tramos`` con ``4=3,50 | 200=1,20``;
+- lee ``piezas_por_cama``: con ella los tramos son el precio por pieza según
+  cuántas van en la cama (ver nebula_pricing).
 
 Los tramos se aplican a los artículos creados y, si se marca "actualizar los
 que ya existen", también a esos (sustituyen a los que tuvieran).
@@ -38,6 +40,8 @@ _HEADERS = {
     "punto_pedido": "reorder_point", "punto_de_pedido": "reorder_point",
     "reorder_point": "reorder_point",
     "tramos": "_tiers", "precios_por_cantidad": "_tiers", "price_tiers": "_tiers",
+    "piezas_por_cama": "_per_bed", "piezas_cama": "_per_bed", "por_cama": "_per_bed",
+    "units_per_bed": "_per_bed",
 }
 _NUMERIC = {"price", "cost", "reorder_point"}
 _TIER_HEADER = re.compile(r"^(?:precio|price|pvp)_(?:desde_|de_|x_?|a_partir_de_)?(\d+)(?:_(?:uds?|unidades|mas))?$")
@@ -58,13 +62,15 @@ _ERRORS = {
 
 TEMPLATE_HEADERS = [
     "sku", "nombre", "descripcion", "tipo", "categoria", "precio", "coste",
-    "precio_desde_4", "precio_desde_200",
+    "piezas_por_cama", "precio_desde_2", "precio_desde_3", "precio_desde_4", "precio_desde_200",
 ]
+# Nazareno: 4 por cama, precio por pieza según cuántas van en la cama.
+# Llavero: sin camas, más barato a partir de 200 unidades.
 TEMPLATE_ROWS = [
-    ["NAZ-001", "Nazareno 10 cm", "Figura de nazareno pintada por colores", "producto",
-     "Semana Santa", "6,00", "1,20", "4,50", ""],
+    ["NAZ-001", "Nazareno 35 cm", "Nazareno porta medallas", "producto",
+     "Semana Santa", "39,00", "8,00", "4", "30,00", "27,00", "25,00", ""],
     ["LLA-001", "Llavero escudo", "Llavero pequeño", "producto", "Llaveros", "2,50", "0,30",
-     "2,00", "0,90"],
+     "", "", "", "", "0,90"],
 ]
 
 
@@ -161,10 +167,12 @@ def import_items(
     writer.writeheader()
 
     tier_rows: dict[str, list[dict]] = {}
+    bed_rows: dict[str, int | None] = {}
     errors: list[dict] = []
     for row_num, row in enumerate(rows[1:], start=2):
         record: dict[str, str] = {}
         tiers: list[dict] = []
+        per_bed: str | None = None
         try:
             for (name, qty), cell in zip(columns, row):
                 cell = cell.strip()
@@ -173,6 +181,8 @@ def import_items(
                         tiers.append({"min_quantity": str(qty), "unit_price": normalize_number(cell)})
                 elif name == "_tiers":
                     tiers.extend(parse_tiers(cell))
+                elif name == "_per_bed":
+                    per_bed = cell
                 elif name in _NUMERIC:
                     record.setdefault(name, normalize_number(cell))
                 elif name == "item_type":
@@ -188,10 +198,20 @@ def import_items(
         writer.writerow(record)
         if tiers and record.get("sku"):
             tier_rows[record["sku"]] = tiers
+        if per_bed and record.get("sku"):
+            try:
+                value = int(float(normalize_number(per_bed)))
+                if value < 1:
+                    raise ValueError
+                bed_rows[record["sku"]] = value
+            except ValueError:
+                errors.append({"row": row_num, "sku": record["sku"],
+                               "error": f"piezas por cama no válidas: {per_bed!r}"})
 
+    touched = set(tier_rows) | set(bed_rows)
     existing = {
-        sku for (sku,) in db.query(Product.sku).filter(Product.sku.in_(list(tier_rows))).all()
-    } if tier_rows else set()
+        sku for (sku,) in db.query(Product.sku).filter(Product.sku.in_(list(touched))).all()
+    } if touched else set()
 
     result = import_items_from_csv(
         db,
@@ -218,6 +238,12 @@ def import_items(
         except Exception as exc:  # HTTPException con el motivo
             detail = getattr(exc, "detail", str(exc))
             result["errors"].append({"sku": sku, "error": f"Precios por cantidad: {detail}"})
+    for sku, value in bed_rows.items():
+        if sku in existing and not update_existing:
+            continue
+        product = db.query(Product).filter(Product.sku == sku).first()
+        if product is not None:
+            product.units_per_bed = value
     db.commit()
     result["tiers_updated"] = tiers_updated
     return result

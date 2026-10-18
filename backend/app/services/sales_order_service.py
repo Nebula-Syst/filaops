@@ -35,7 +35,7 @@ from app.models.order_event import OrderEvent
 from app.core.status_config import StatusTransitionError, validate_sales_order_transition
 from app.services.customer_service import get_customer_discount_percent as _get_customer_discount_percent
 from app.services.tax_calculation_service import calculate_sales_tax
-from app.services.nebula_pricing import price_for_quantity
+from app.services.nebula_pricing import bed_part_note, price_breakdown
 
 # ---------------------------------------------------------------------------
 # DEBT-1 D1-A mechanical split: the names below moved verbatim to focused
@@ -429,37 +429,44 @@ def create_sales_order(
 
             explicit_price = line.get("unit_price")
             if explicit_price is not None:
-                unit_price = Decimal(str(explicit_price))
+                parts = [{"quantity": line["quantity"], "unit_price": Decimal(str(explicit_price))}]
             else:
-                # PrintFlow: precio del tramo de cantidad (4 por cama, 200 uds…)
-                unit_price = price_for_quantity(db, product, line["quantity"])
+                # PrintFlow: precio por tramos de cantidad o por camas; por camas
+                # el pedido lleva una línea para las camas llenas y otra para la
+                # del resto, así cada una tiene su precio exacto
+                parts = price_breakdown(db, product, line["quantity"])
 
-            if unit_price < 0:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Product '{product.sku}' unit price must be >= 0",
-                )
-            if explicit_price is None and unit_price <= 0:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Product '{product.sku}' has no selling price configured",
-                )
+            line_total = Decimal("0")
+            for part in parts:
+                unit_price = part["unit_price"]
+                if unit_price < 0:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Product '{product.sku}' unit price must be >= 0",
+                    )
+                if explicit_price is None and unit_price <= 0:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Product '{product.sku}' has no selling price configured",
+                    )
 
-            line_total = unit_price * line["quantity"]
+                part_total = unit_price * part["quantity"]
+                line_total += part_total
+                notes = " · ".join(n for n in (bed_part_note(part), line.get("notes")) if n) or None
 
-            validated_lines.append({
-                "line_type": "product",
-                "description": None,
-                "product": product,
-                "material": None,
-                "product_id": product.id,
-                "material_inventory_id": None,
-                "quantity": line["quantity"],
-                "unit_price": unit_price,
-                "line_total": line_total,
-                "discountable": True,
-                "notes": line.get("notes"),
-            })
+                validated_lines.append({
+                    "line_type": "product",
+                    "description": None,
+                    "product": product,
+                    "material": None,
+                    "product_id": product.id,
+                    "material_inventory_id": None,
+                    "quantity": part["quantity"],
+                    "unit_price": unit_price,
+                    "line_total": part_total,
+                    "discountable": True,
+                    "notes": notes,
+                })
             line_names.append(product.name)
 
         else:
