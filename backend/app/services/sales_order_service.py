@@ -35,6 +35,7 @@ from app.models.order_event import OrderEvent
 from app.core.status_config import StatusTransitionError, validate_sales_order_transition
 from app.services.customer_service import get_customer_discount_percent as _get_customer_discount_percent
 from app.services.tax_calculation_service import calculate_sales_tax
+from app.services.nebula_pricing import price_for_quantity
 
 # ---------------------------------------------------------------------------
 # DEBT-1 D1-A mechanical split: the names below moved verbatim to focused
@@ -430,7 +431,8 @@ def create_sales_order(
             if explicit_price is not None:
                 unit_price = Decimal(str(explicit_price))
             else:
-                unit_price = product.selling_price or Decimal("0")
+                # PrintFlow: precio del tramo de cantidad (4 por cama, 200 uds…)
+                unit_price = price_for_quantity(db, product, line["quantity"])
 
             if unit_price < 0:
                 raise HTTPException(

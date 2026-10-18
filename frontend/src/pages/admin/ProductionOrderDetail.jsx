@@ -29,6 +29,7 @@ import {
   OperationsTimeline,
 } from "../../components/production";
 import ReleaseScheduleWizard from "../../components/production/ReleaseScheduleWizard";
+import ProductionFiles from "../../nebula/ProductionFiles"; // PrintFlow
 import {
   PRODUCTION_ORDER_COLORS,
   getStatusColor,
@@ -493,6 +494,9 @@ export default function ProductionOrderDetail() {
           </div>
         </div>
       </div>
+
+      {/* PrintFlow: 3MF del artículo */}
+      <ProductionFiles productId={order.product_id} />
 
       {/* Operations Timeline (visual overview) */}
       {order.status !== "draft" && (

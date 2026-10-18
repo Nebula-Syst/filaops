@@ -18,6 +18,8 @@ import { FormErrorSummary, RequiredIndicator } from "./ErrorMessage";
 import { ITEM_TYPES } from "./item-wizard/constants";
 import Modal from "./Modal";
 import StockAdjuster from "../nebula/StockAdjuster"; // PrintFlow
+import PriceTiersEditor from "../nebula/PriceTiersEditor"; // PrintFlow
+import ProductFiles from "../nebula/ProductFiles"; // PrintFlow
 
 const PROCUREMENT_TYPES = [
   { value: "make", label: "Make (Manufactured)" },
@@ -768,6 +770,18 @@ export default function ItemForm({
                 )}
               </div>
             </div>
+
+            {/* PrintFlow: precios por cantidad y archivos 3MF (se guardan al momento) */}
+            {editingItem && !editingItem.is_template && !editingItem.material_type_id ? (
+              <div className="space-y-4">
+                <PriceTiersEditor key={`tiers-${editingItem.id}`} item={editingItem} />
+                <ProductFiles key={`files-${editingItem.id}`} item={editingItem} />
+              </div>
+            ) : !editingItem ? (
+              <p className="text-xs text-gray-400">
+                Save the item first to add quantity prices and print files (3MF).
+              </p>
+            ) : null}
 
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">

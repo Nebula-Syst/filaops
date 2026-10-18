@@ -4135,7 +4135,41 @@
   "Order served from stock; no production needed": "Pedido servido desde el stock; no hace falta fabricar",
   "Stock can only be used once the order is confirmed and before it ships; this order is confirmed.": "El stock solo se puede usar con el pedido confirmado y antes de entregarlo.",
   "The units are reserved from stock and ready to ship.": "Las unidades están apartadas del stock y listas para enviar.",
-  "The units are reserved from stock. No carrier or tracking number needed.": "Las unidades están apartadas del stock. No hace falta transportista ni número de seguimiento."
+  "The units are reserved from stock. No carrier or tracking number needed.": "Las unidades están apartadas del stock. No hace falta transportista ni número de seguimiento.",
+  "Quantity prices": "Precios por cantidad",
+  "The more units per print bed, the cheaper each one. Below the first tier the selling price applies.": "Cuantas más piezas caben en una cama, más barata sale cada una. Por debajo del primer tramo se cobra el precio de venta.",
+  "+ Add tier": "+ Añadir tramo",
+  "No quantity prices yet.": "Todavía no hay precios por cantidad.",
+  "From (units)": "Desde (uds.)",
+  "Price per unit": "Precio por unidad",
+  "Note (optional)": "Nota (opcional)",
+  "4 per bed": "4 por cama",
+  "Remove tier": "Quitar tramo",
+  "Quantity must be 1 or more": "La cantidad tiene que ser 1 o más",
+  "Enter a price": "Escribe un precio",
+  "Repeated quantity": "Cantidad repetida",
+  "Quantity prices saved": "Precios por cantidad guardados",
+  "Discard": "Descartar",
+  "Save prices": "Guardar precios",
+  "Could not save quantity prices": "No se pudieron guardar los precios por cantidad",
+  "Could not load quantity prices": "No se pudieron cargar los precios por cantidad",
+  "Print files": "Archivos de impresión",
+  "3MF, STL, gcode… One or several. Drag them here or pick them.": "3MF, STL, gcode… Uno o varios. Arrástralos aquí o elígelos.",
+  "+ Add files": "+ Añadir archivos",
+  "No print files yet.": "Todavía no hay archivos de impresión.",
+  "Note": "Nota",
+  "White PLA, 0.2 mm, 4 per bed...": "PLA blanco, 0,2 mm, 4 por cama...",
+  "Could not delete the file": "No se pudo borrar el archivo",
+  "Could not save the note": "No se pudo guardar la nota",
+  "Could not load print files": "No se pudieron cargar los archivos de impresión",
+  "Save the item first to add quantity prices and print files (3MF).": "Guarda primero el artículo para añadir precios por cantidad y archivos de impresión (3MF).",
+  "Import items": "Importar artículos",
+  "Upload a CSV with one item per row. From Excel: File → Save as → CSV (semicolon delimited).": "Sube un CSV con un artículo por fila. Desde Excel: Archivo → Guardar como → CSV (delimitado por punto y coma).",
+  "Columns: sku, nombre, descripcion, tipo, categoria, precio, coste. For quantity prices add columns like precio_desde_4 or precio_desde_200 (price per unit from that quantity).": "Columnas: sku, nombre, descripcion, tipo, categoria, precio, coste. Para los precios por cantidad añade columnas como precio_desde_4 o precio_desde_200 (precio por unidad a partir de esa cantidad).",
+  "Download template": "Descargar plantilla",
+  "CSV file": "Archivo CSV",
+  "Update items that already exist (same SKU)": "Actualizar los artículos que ya existen (mismo SKU)",
+  "Items whose SKU already existed were left as they were.": "Los artículos cuyo SKU ya existía se han dejado como estaban."
  },
  "patterns": [
   [
@@ -5313,6 +5347,42 @@
   [
    "Stock can only be used once the order is confirmed and before it ships; this order is {0}.",
    "El stock solo se puede usar con el pedido confirmado y antes de entregarlo; este pedido está {0}."
+  ],
+  [
+   "Same price for any quantity: {0} per unit.",
+   "Mismo precio para cualquier cantidad: {0} por unidad."
+  ],
+  [
+   "{0} – {1} units: {2} each",
+   "{0} – {1} uds.: {2} cada una"
+  ],
+  [
+   "{0} or more units: {1} each",
+   "{0} uds. o más: {1} cada una"
+  ],
+  [
+   "Files can be up to {0} MB each",
+   "Cada archivo puede ocupar como máximo {0} MB"
+  ],
+  [
+   "{0}: files can be up to {1} MB each",
+   "{0}: cada archivo puede ocupar como máximo {1} MB"
+  ],
+  [
+   "Uploading... {0}%",
+   "Subiendo... {0} %"
+  ],
+  [
+   "Created: {0} · Updated: {1} · Skipped: {2}",
+   "Creados: {0} · Actualizados: {1} · Omitidos: {2}"
+  ],
+  [
+   "Quantity prices saved for {0} items",
+   "Precios por cantidad guardados en {0} artículos"
+  ],
+  [
+   "Row {0}",
+   "Fila {0}"
   ]
  ],
  "ignored": [
