@@ -6,6 +6,7 @@ import CustomerSelectionStep from "./sales-order/CustomerSelectionStep";
 import ProductSelectionStep from "./sales-order/ProductSelectionStep";
 import ReviewStep from "./sales-order/ReviewStep";
 import { needsShipping } from "../nebula/delivery";
+import { tierPrice } from "../nebula/pricing"; // PrintFlow
 
 // Item type options
 const ITEM_TYPES = [
@@ -94,6 +95,7 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
 
   // Line items state
   const [lineItems, setLineItems] = useState([]);
+  const [priceTiers, setPriceTiers] = useState({}); // PrintFlow: {product_id: [tramos]}
 
   // Product search state
   const [productSearch, setProductSearch] = useState("");
@@ -344,6 +346,11 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
         const data = await res.json();
         setProducts(data.items || data || []);
       }
+      // PrintFlow: precios por cantidad de todos los artículos
+      const tiersRes = await fetch(`${API_URL}/api/v1/items/nebula/price-tiers`, {
+        credentials: "include",
+      });
+      if (tiersRes.ok) setPriceTiers(await tiersRes.json());
     } catch {
       // Products fetch failure is non-critical - product selector will be empty
     }
@@ -574,7 +581,7 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
       setLineItems(
         lineItems.map((li) =>
           li.product_id === product.id && li.line_type === "product"
-            ? { ...li, quantity: li.quantity + 1 }
+            ? withTierPrice({ ...li, quantity: li.quantity + 1 })
             : li
         )
       );
@@ -588,7 +595,7 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
           product: product,
           material: null,
           quantity: 1,
-          unit_price: parseFloat(product.selling_price) || 0, // /items lo devuelve como texto
+          unit_price: tierPrice(product, priceTiers[product.id], 1), // /items lo devuelve como texto
           _key: `product-${product.id}`,
         },
       ]);
@@ -647,12 +654,19 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
     setLineItems(lineItems.filter((li) => li._key !== key));
   };
 
+  // PrintFlow: al cambiar la cantidad, el precio sigue los tramos del artículo
+  // salvo que se haya escrito a mano
+  const withTierPrice = (li) =>
+    li.line_type === "product" && !li._priceManual
+      ? { ...li, unit_price: tierPrice(li.product, priceTiers[li.product_id], li.quantity) }
+      : li;
+
   // Update line item quantity
   const updateLineQuantity = (key, quantity) => {
     setLineItems(
       lineItems.map((li) =>
         li._key === key
-          ? { ...li, quantity: Math.max(li.line_type === "material" ? 0.01 : 1, quantity) }
+          ? withTierPrice({ ...li, quantity: Math.max(li.line_type === "material" ? 0.01 : 1, quantity) })
           : li
       )
     );
@@ -662,7 +676,7 @@ export default function SalesOrderWizard({ isOpen, onClose, onSuccess }) {
   const updateLinePrice = (key, price) => {
     setLineItems(
       lineItems.map((li) =>
-        li._key === key ? { ...li, unit_price: price } : li
+        li._key === key ? { ...li, unit_price: price, _priceManual: true } : li
       )
     );
   };

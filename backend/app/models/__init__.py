@@ -58,6 +58,9 @@ from app.models.tax_rate import TaxRate
 # System Settings (generic key/value store for admin-editable config; PR-01)
 from app.models.system_setting import SystemSetting
 
+# PrintFlow: precios por cantidad y archivos 3MF por artículo
+from app.models.nebula_product import ProductPriceTier, ProductFile
+
 __all__ = [
     # Item management
     "ItemCategory",

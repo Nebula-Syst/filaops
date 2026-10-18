@@ -17,6 +17,7 @@ import AdjustmentReasonModal from "../../components/items/AdjustmentReasonModal"
 import DuplicateItemModal from "../../components/items/DuplicateItemModal";
 import SuggestPricesModal from "../../components/items/SuggestPricesModal";
 import VariantMatrixModal from "../../components/items/VariantMatrixModal";
+import ImportItemsModal from "../../nebula/ImportItemsModal"; // PrintFlow
 
 export default function AdminItems() {
   const api = useApi();
@@ -87,6 +88,7 @@ export default function AdminItems() {
   const [duplicatingItem, setDuplicatingItem] = useState(null);
   const [variantItem, setVariantItem] = useState(null);
   const [showSuggestPrices, setShowSuggestPrices] = useState(false);
+  const [showImport, setShowImport] = useState(false); // PrintFlow
   const [suggestPricesResult, setSuggestPricesResult] = useState(null);
 
   // Confirm dialog states
@@ -508,6 +510,7 @@ export default function AdminItems() {
             setEditingItem(null);
             setShowItemModal(true);
           }}
+          onImport={() => setShowImport(true)}
         />
 
         <ItemsFilterBar
@@ -815,6 +818,16 @@ export default function AdminItems() {
         onSuccess={() => {
           fetchItems();
           fetchStats();
+        }}
+      />
+
+      <ImportItemsModal
+        isOpen={showImport}
+        onClose={() => setShowImport(false)}
+        onImported={() => {
+          fetchItems();
+          fetchStats();
+          fetchCategories();
         }}
       />
 

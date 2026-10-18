@@ -18,6 +18,7 @@ export default function ItemsPageHeader({
   onClearSuggestPricesResult,
   onNewMaterial,
   onNewItem,
+  onImport, // PrintFlow
 }) {
   const formatCurrency = useFormatCurrency();
   return (
@@ -77,6 +78,14 @@ export default function ItemsPageHeader({
           >
             Suggest Prices
           </button>
+          {onImport && (
+            <button
+              onClick={onImport}
+              className="px-4 py-2 bg-gray-800 border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white"
+            >
+              Import
+            </button>
+          )}
           <button
             onClick={onNewMaterial}
             className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
