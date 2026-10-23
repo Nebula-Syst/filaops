@@ -4175,6 +4175,18 @@
   "Optional. Fill it in if the price depends on how many pieces share a bed.": "Opcional. Rellénalo si el precio depende de cuántas piezas comparten cama.",
   "Pieces in the bed": "Piezas en la cama",
   "More pieces than fit in a bed": "Más piezas de las que caben en una cama",
+  "Live status": "Estado en vivo",
+  "Chamber": "Cámara",
+  "Preparing": "Preparando",
+  "Finished": "Terminada",
+  "Wrong access code.": "Código de acceso incorrecto.",
+  "Not responding. Check that it is on and connected to the network.": "No responde. Comprueba que esté encendida y conectada a la red.",
+  "Missing:": "Falta:",
+  "IP address": "dirección IP",
+  "serial number": "número de serie",
+  "access code": "código de acceso",
+  "Right nozzle": "Boquilla derecha",
+  "Left nozzle": "Boquilla izquierda",
   "Spools by workshop": "Bobinas por taller",
   "Add spools": "Añadir bobinas",
   "Search: black, PLA, PETG…": "Buscar: negro, PLA, PETG…",
@@ -5418,6 +5430,18 @@
   [
    "{0} ({1} per bed)",
    "{0} ({1} por cama)"
+  ],
+  [
+   "{0} left · finishes at {1}",
+   "Quedan {0} · termina a las {1}"
+  ],
+  [
+   " · layer {0} of {1}",
+   " · capa {0} de {1}"
+  ],
+  [
+   "Printer error {0}",
+   "Error de la impresora: {0}"
   ],
   [
    "{0} spools",

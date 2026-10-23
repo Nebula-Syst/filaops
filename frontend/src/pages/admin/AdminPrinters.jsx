@@ -13,6 +13,8 @@ import PrinterModal from "../../components/printers/PrinterModal";
 import IPProbeSection from "../../components/printers/IPProbeSection";
 import MaintenanceModal from "../../components/printers/MaintenanceModal";
 import PrinterCard from "../../components/printers/PrinterCard";
+import { mergeLiveTelemetry, statusKey, statusText } from "../../components/printers/liveStatus";
+import PrintersLive from "../../nebula/PrintersLive"; // PrintFlow
 
 export default function AdminPrinters() {
   const api = useApi();
@@ -106,9 +108,10 @@ export default function AdminPrinters() {
     }
   }, [canUseHud, viewMode]);
 
-  // HUD-mode telemetry polling. Re-fetches when viewMode, canUseHud,
+  // Live telemetry polling (table and HUD views alike, whenever PRO's
+  // FilaFarm is available). Re-fetches when viewMode, canUseHud,
   // or activeTab changes so:
-  //   - switching to HUD immediately picks up live telemetry
+  //   - gaining the feature immediately picks up live telemetry
   //   - switching tabs clears the interval (no leaked polling)
   //   - losing PRO license stops the polling
   // Uses a ref guard to skip the initial mount (the mount effect at
@@ -121,7 +124,7 @@ export default function AdminPrinters() {
     }
     if (activeTab !== "list") return;
     fetchPrinters();
-    if (viewMode === "hud" && canUseHud) {
+    if (canUseHud) {
       const hudInterval = setInterval(() => fetchPrinters({ silent: true }), 15000);
       return () => clearInterval(hudInterval);
     }
@@ -147,20 +150,15 @@ export default function AdminPrinters() {
       const data = await api.get(`/api/v1/printers?${params}`);
       let printerList = data.items || [];
 
-      // Only overlay PRO telemetry when HUD mode is active. Table view
-      // doesn't need live temps/progress, so we skip the extra API call
-      // to avoid unnecessary requests and silent failures when the fleet
-      // isn't running. The overlay merges by string-coerced ID because
-      // Core returns numeric IDs and PRO returns string IDs.
-      if (viewMode === "hud" && canUseHud) {
+      // Overlay PRO's live telemetry in both views whenever FilaFarm is
+      // available. Core's stored printers.status is only a last-known value
+      // (often weeks old), so without the overlay the table read "offline"
+      // for printers that were printing. mergeLiveTelemetry matches by
+      // string ID (PRO sends strings) and keeps Core's numeric `id`.
+      if (canUseHud) {
         try {
           const proData = await api.get("/api/v1/pro/filafarm/printers");
-          const proMap = new Map(
-            (proData.printers || []).map((p) => [String(p.id), p])
-          );
-          printerList = printerList.map((p) =>
-            proMap.has(String(p.id)) ? { ...p, ...proMap.get(String(p.id)) } : p
-          );
+          printerList = mergeLiveTelemetry(printerList, proData.printers);
         } catch (err) {
           // PRO endpoint unavailable (fleet not started, license issue,
           // etc.) — degrade gracefully, HUD shows "--" for telemetry.
@@ -513,6 +511,17 @@ export default function AdminPrinters() {
       {/* Tab Content */}
       {activeTab === "list" && (
         <div className="space-y-4">
+          {/* PrintFlow: estado en vivo de las impresoras Bambu */}
+          <PrintersLive
+            onEdit={(id) => {
+              const printer = printers.find((p) => p.id === id);
+              if (printer) {
+                setSelectedPrinter(printer);
+                setShowEditModal(true);
+              }
+            }}
+          />
+
           {/* Filters */}
           <div className="flex gap-4 flex-wrap">
             <input
@@ -620,8 +629,12 @@ export default function AdminPrinters() {
                       <h3 className="text-white font-medium">{printer.name}</h3>
                       <p className="text-gray-500 text-sm">{printer.code}</p>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-xs ${statusColors[printer.status] || statusColors.offline}`}>
-                      {printer.status}
+                    <span
+                      data-testid={`printer-status-${printer.id}`}
+                      aria-live="polite"
+                      className={`px-2 py-1 rounded-full text-xs ${statusColors[statusKey(printer)] || statusColors.offline}`}
+                    >
+                      {statusText(printer)}
                     </span>
                   </div>
 
