@@ -49,8 +49,10 @@ describe('formatDuration / finishTime', () => {
   })
   it('añade el día si termina otro día', () => {
     const now = new Date(2026, 9, 23, 23, 0)
-    expect(finishTime(30, now)).not.toMatch(/\s/)
-    expect(finishTime(120, now)).toMatch(/\s/)
+    const time = (d) => d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    const weekday = new Date(2026, 9, 24).toLocaleDateString(undefined, { weekday: 'short' })
+    expect(finishTime(30, now)).toBe(time(new Date(2026, 9, 23, 23, 30)))
+    expect(finishTime(120, now)).toBe(`${weekday} ${time(new Date(2026, 9, 24, 1, 0))}`)
     expect(finishTime(null, now)).toBeNull()
   })
 })
