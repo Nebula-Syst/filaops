@@ -5,6 +5,8 @@
   uno. Por debajo del primer tramo se usa ``Product.selling_price``.
 - ``ProductFile``: los 3MF (o STL, gcode…) con los que se imprime el artículo;
   puede tener varios si el producto lleva varias placas o piezas.
+- ``ProductShopLink``: la ficha del artículo en cada tienda online; la rellena
+  la sincronización de las tiendas.
 """
 from datetime import datetime, timezone
 
@@ -48,3 +50,13 @@ class ProductFile(Base):
     uploaded_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     product = relationship("Product")
+
+
+class ProductShopLink(Base):
+    __tablename__ = "product_shop_links"
+
+    id = Column(Integer, primary_key=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+    store = Column(String(200), nullable=False)
+    url = Column(String(500), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)

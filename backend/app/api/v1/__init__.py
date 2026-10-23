@@ -46,6 +46,7 @@ from app.api.v1.endpoints import (
     dispatch,
     operation_types,
     nebula_items,
+    nebula_spools,
 )
 from app.api.v1.endpoints.admin import router as admin_router
 from app.api.v1.endpoints.test import test_endpoints_enabled
@@ -245,6 +246,9 @@ router.include_router(system_license.router)
 router.include_router(security.router)
 
 # Material Spools
+# PrintFlow: bobinas por taller (antes que spools para que /spools/nebula/...
+# no lo capture /spools/{spool_id})
+router.include_router(nebula_spools.router)
 router.include_router(spools.router)
 
 # Quality - Dashboard & Metrics

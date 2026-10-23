@@ -4174,7 +4174,25 @@
   "Orders are split into full beds plus one with the rest. Tiers = price per piece by how many go in the bed.": "El pedido se reparte en camas llenas más una con el resto. Tramos = precio por pieza según cuántas van en la cama.",
   "Optional. Fill it in if the price depends on how many pieces share a bed.": "Opcional. Rellénalo si el precio depende de cuántas piezas comparten cama.",
   "Pieces in the bed": "Piezas en la cama",
-  "More pieces than fit in a bed": "Más piezas de las que caben en una cama"
+  "More pieces than fit in a bed": "Más piezas de las que caben en una cama",
+  "Spools by workshop": "Bobinas por taller",
+  "Add spools": "Añadir bobinas",
+  "Search: black, PLA, PETG…": "Buscar: negro, PLA, PETG…",
+  "Spool weight (g)": "Peso de la bobina (g)",
+  "Remaining (g)": "Le queda (g)",
+  "How many": "Cuántas",
+  "Workshop": "Taller",
+  "No workshop": "Sin taller",
+  "Used up": "Gastada",
+  "Search brand or colour…": "Buscar marca o color…",
+  "No spools yet. Use “Add spools” to register the ones you have.": "Todavía no hay bobinas. Usa «Añadir bobinas» para registrar las que tienes.",
+  "1 spool": "1 bobina",
+  "In the online shop": "En la tienda online",
+  "Copy link": "Copiar enlace",
+  "Copied": "Copiado",
+  "Copy the link": "Copia el enlace",
+  "Could not save": "No se ha podido guardar",
+  "Full spool": "Llena"
  },
  "patterns": [
   [
@@ -5400,6 +5418,10 @@
   [
    "{0} ({1} per bed)",
    "{0} ({1} por cama)"
+  ],
+  [
+   "{0} spools",
+   "{0} bobinas"
   ]
  ],
  "ignored": [
