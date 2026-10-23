@@ -185,7 +185,12 @@ async def lifespan(app: FastAPI):
     log_startup_configuration()
     init_database()
     seed_default_data()
+    # PrintFlow: estado en vivo de las impresoras Bambu (MQTT en la red local)
+    from app.services import nebula_printer_live
+    if nebula_printer_live.enabled():
+        nebula_printer_live.service.start()
     yield
+    await nebula_printer_live.service.stop()
     logger.info("Shutting down FilaOps ERP API")
 
 

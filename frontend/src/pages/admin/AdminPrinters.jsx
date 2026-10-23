@@ -13,6 +13,7 @@ import PrinterModal from "../../components/printers/PrinterModal";
 import IPProbeSection from "../../components/printers/IPProbeSection";
 import MaintenanceModal from "../../components/printers/MaintenanceModal";
 import PrinterCard from "../../components/printers/PrinterCard";
+import PrintersLive from "../../nebula/PrintersLive"; // PrintFlow
 
 export default function AdminPrinters() {
   const api = useApi();
@@ -513,6 +514,17 @@ export default function AdminPrinters() {
       {/* Tab Content */}
       {activeTab === "list" && (
         <div className="space-y-4">
+          {/* PrintFlow: estado en vivo de las impresoras Bambu */}
+          <PrintersLive
+            onEdit={(id) => {
+              const printer = printers.find((p) => p.id === id);
+              if (printer) {
+                setSelectedPrinter(printer);
+                setShowEditModal(true);
+              }
+            }}
+          />
+
           {/* Filters */}
           <div className="flex gap-4 flex-wrap">
             <input
