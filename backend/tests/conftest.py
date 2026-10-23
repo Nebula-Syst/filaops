@@ -21,6 +21,7 @@ from pathlib import Path
 # Settings are loaded at import time from env vars / .env file.
 # =============================================================================
 os.environ["DB_NAME"] = "filaops_test"
+os.environ["NEBULA_PRINTER_LIVE"] = "0"  # PrintFlow: sin conexiones MQTT en los tests
 
 # PR-05: EncryptedString-typed columns (e.g. company_settings.ai_api_key)
 # call get_install_uuid() on every write, which mkdir's LICENSE_CONFIG_DIR.

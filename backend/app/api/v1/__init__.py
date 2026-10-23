@@ -46,6 +46,7 @@ from app.api.v1.endpoints import (
     dispatch,
     operation_types,
     nebula_items,
+    nebula_printers,
 )
 from app.api.v1.endpoints.admin import router as admin_router
 from app.api.v1.endpoints.test import test_endpoints_enabled
@@ -224,6 +225,10 @@ router.include_router(
     prefix="/accounting",
     tags=["accounting"]
 )
+
+# PrintFlow: estado en vivo (antes que printers para que /printers/nebula/...
+# no lo capture /printers/{printer_id})
+router.include_router(nebula_printers.router, prefix="/printers", tags=["printers"])
 
 # Printers
 router.include_router(
