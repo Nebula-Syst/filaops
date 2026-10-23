@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [4.3.2] - 2026-10-19
+
+### Fixed
+
+- **Product images survive upgrades.** Uploaded product images were saved inside the backend container (`/app/static/uploads/products`) instead of on the uploads volume, so recreating the container (every Docker upgrade) deleted them. They are now saved to `/app/uploads/products` on the volume. Image links don't change, and images saved before this fix still show for as long as their files exist. In Docker, images uploaded before the last container recreate are already gone and need uploading again.
+- **License page with an active license.** It now says the license is active instead of asking for a key and linking to the license site, drops a "Restart Core" banner that never went away, and shows an unknown activation date as "—" instead of Dec 31, 1969. A license cache written without an activation time (as license validation writes it) made the API report 1 January 1970.
+
+### Upgrade notes
+
+- **Docker: copy product images onto the volume before upgrading.** While the old version is still running: `docker compose exec backend sh -c 'set -eu; src=/app/static/uploads/products; dst=/app/uploads/products; mkdir -p "$dst"; if [ -d "$src" ]; then cp -a "$src/." "$dst/"; fi; ls "$dst" | wc -l'`. It prints how many images are now on the volume, including any already there; if it prints an error, don't upgrade until it succeeds. See [Upgrading FilaOps](docs/UPGRADE.md#2-docker-copy-product-images-onto-the-volume).
+- **No database migrations.** From 4.3.1, check out `v4.3.2` and rebuild (`docker compose up -d --build`).
+- **Coming from 4.1.x or older?** Read [Upgrading FilaOps](docs/UPGRADE.md) first: it starts with the settings 4.2.0 needs, then upgrades straight to 4.3.2.
+
 ## [4.3.1] - 2026-10-14
 
 ### Changed
