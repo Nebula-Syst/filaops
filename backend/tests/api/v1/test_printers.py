@@ -402,9 +402,10 @@ class TestPrinterUpdate:
         if "id" not in printer:
             pytest.skip("Tier limit reached")
 
-        resp = client.put(f"{BASE_URL}/{printer['id']}", json={"brand": "klipper"})
+        # PrintFlow: creality y klipper están permitidas (Moonraker)
+        resp = client.put(f"{BASE_URL}/{printer['id']}", json={"brand": "octoprint"})
         assert resp.status_code == 403
-        assert "klipper" in resp.json()["detail"].lower()
+        assert "octoprint" in resp.json()["detail"].lower()
         assert "pro" in resp.json()["detail"].lower()
 
     def test_update_printer_not_found(self, client):
@@ -619,7 +620,7 @@ class TestCSVImport:
         csv_data = (
             "code,name,model,brand\n"
             f"PRT-CR1-{uid},Printer A,Mod A,bambulab\n"
-            f"PRT-CR2-{uid},Printer B,Mod B,klipper"
+            f"PRT-CR2-{uid},Printer B,Mod B,octoprint"  # PrintFlow: klipper permitida
         )
         resp = client.post(f"{BASE_URL}/import-csv", json={
             "csv_data": csv_data, "skip_duplicates": True,
@@ -633,7 +634,7 @@ class TestCSVImport:
         # the brand gate and becomes a per-row error.
         assert len(data["errors"]) >= 1
         klipper_errors = [
-            e for e in data["errors"] if "klipper" in str(e.get("error", "")).lower()
+            e for e in data["errors"] if "octoprint" in str(e.get("error", "")).lower()
         ]
         assert len(klipper_errors) == 1, f"Expected klipper gate error, got {data['errors']}"
 
@@ -755,7 +756,7 @@ class TestPrinterEdgeCases:
         shouldn't be able to POST a Klipper printer directly via curl
         even though `PrinterBrand` enum still formally accepts the value.
         """
-        for brand in ["klipper", "octoprint", "prusa", "creality"]:
+        for brand in ["octoprint", "prusa"]:  # PrintFlow: klipper y creality permitidas
             uid = uuid.uuid4().hex[:6]
             resp = client.post(BASE_URL, json={
                 "code": f"PRT-B-{uid}",

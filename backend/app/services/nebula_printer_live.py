@@ -1,4 +1,6 @@
-"""PrintFlow: estado en vivo de las impresoras Bambu por MQTT en la red local.
+"""PrintFlow: estado en vivo de las impresoras en la red local.
+
+Bambu por MQTT y Creality/Klipper por la API HTTP de Moonraker.
 
 Usa el cliente MQTT de FilaOps (app.services.mqtt.client) pero con conexión
 asíncrona y reconexión automática: una impresora apagada al arrancar se conecta
@@ -6,11 +8,16 @@ sola cuando se enciende. Cada minuto se releen las impresoras de la base de
 datos, así que basta con poner IP, número de serie y código de acceso en
 Impresoras para que empiece a leerla. Solo lectura: no se manda ninguna orden
 a la impresora salvo "pushall" (pedir el estado completo).
+
+Las Creality (K1, K2, Hi, Ender-3 V3...) y cualquier Klipper llevan Moonraker:
+se pregunta su estado por HTTP en cada guardado (cada 15 s), solo hace falta la IP.
 """
 import asyncio
 import os
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+
+import httpx
 
 from app.db.session import SessionLocal
 from app.logging_config import get_logger
@@ -33,6 +40,19 @@ STATE_TO_STATUS = {
     "RUNNING": "printing",
     "PAUSE": "paused",
 }
+
+# print_stats.state de Moonraker → el mismo código que usan las Bambu
+MOONRAKER_STATES = {
+    "standby": "IDLE",
+    "printing": "RUNNING",
+    "paused": "PAUSE",
+    "complete": "FINISH",
+    "cancelled": "IDLE",
+    "error": "FAILED",
+}
+
+MOONRAKER_BRANDS = ("creality", "klipper")
+LIVE_BRANDS = ("bambulab",) + MOONRAKER_BRANDS
 
 # Códigos de conexión MQTT que merece la pena explicar
 CONNECT_ERRORS = {
@@ -71,6 +91,53 @@ class LiveClient(BambuMQTTClient):
     def _merge_print_status(self, print_data: Dict[str, Any]):
         _deep_merge(self._status_cache, print_data)
         self._update_friendly_fields()
+
+    def poll(self):
+        pass  # las Bambu mandan solas lo que cambia
+
+    def summary(self) -> Dict[str, Any]:
+        return summarize(self.get_cached_status(), self.connect_error)
+
+
+MOONRAKER_OBJECTS = {
+    "print_stats": None,
+    "display_status": ["progress"],
+    "virtual_sdcard": ["progress", "layer", "layer_count"],
+    "extruder": ["temperature", "target"],
+    "heater_bed": ["temperature", "target"],
+    "temperature_sensor chamber_temp": ["temperature"],
+}
+
+
+class MoonrakerClient:
+    """Pregunta el estado a Moonraker; si no contesta se queda con el último."""
+
+    def __init__(self, printer_id: int, host: str, port: int = 7125, api_key: Optional[str] = None):
+        self.printer_id = printer_id
+        self.url = f"http://{host}:{port}/printer/objects/query"
+        self.headers = {"X-Api-Key": api_key} if api_key else {}
+        self.status: Dict[str, Any] = {}
+        self.last_update: Optional[str] = None
+        self.connect_error: Optional[str] = None
+
+    def poll(self):
+        try:
+            response = httpx.post(self.url, json={"objects": MOONRAKER_OBJECTS}, headers=self.headers, timeout=5)
+            if response.status_code in (401, 403):
+                self.connect_error = "bad_api_key"
+                return
+            response.raise_for_status()
+            self.status = response.json()["result"]["status"]
+            self.last_update = datetime.now(timezone.utc).isoformat()
+            self.connect_error = None
+        except (httpx.HTTPError, ValueError, KeyError) as e:
+            logger.debug(f"Moonraker {self.url}: {e}")
+
+    def summary(self) -> Dict[str, Any]:
+        return summarize_moonraker(self.status, self.last_update, self.connect_error)
+
+    def disconnect(self):
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -183,6 +250,51 @@ def summarize(status: Dict[str, Any], connect_error: Optional[str] = None) -> Di
     }
 
 
+def summarize_moonraker(status: Dict[str, Any], last_update: Optional[str], connect_error: Optional[str] = None) -> Dict[str, Any]:
+    """Lo mismo que summarize() pero con lo que devuelve Moonraker."""
+    stale = True
+    if last_update:
+        stale = (datetime.now(timezone.utc) - datetime.fromisoformat(last_update)).total_seconds() > STALE_SECONDS
+    online = not stale
+    stats = status.get("print_stats") or {}
+    sdcard = status.get("virtual_sdcard") or {}
+    info = stats.get("info") or {}
+    state = MOONRAKER_STATES.get(str(stats.get("state") or "").lower()) if stats else None
+
+    progress = _num((status.get("display_status") or {}).get("progress")) or _num(sdcard.get("progress")) or 0
+    duration = _num(stats.get("print_duration")) or 0
+    remaining = None
+    if state in ("RUNNING", "PAUSE") and progress > 0.01 and duration > 0:
+        remaining = round((duration / progress - duration) / 60)
+
+    def temp(name):
+        heater = status.get(name) or {}
+        if heater.get("temperature") is None:
+            return None
+        return {"current": _num(heater.get("temperature")), "target": _num(heater.get("target"))}
+
+    nozzle = temp("extruder")
+    return {
+        "online": online,
+        "connect_error": connect_error,
+        "last_update": last_update,
+        "state": state,
+        "status": STATE_TO_STATUS.get(state, "idle") if online else "offline",
+        "percent": round(progress * 100) if state in ("RUNNING", "PAUSE", "FINISH") else None,
+        "remaining_minutes": remaining,
+        "layer": _num(info.get("current_layer")) or _num(sdcard.get("layer")) or None,
+        "total_layers": _num(info.get("total_layer")) or _num(sdcard.get("layer_count")) or None,
+        "file": stats.get("filename") or None,
+        "print_error": None,
+        "hms": [],
+        "ams": [],
+        "wifi_signal": None,
+        "nozzles": [nozzle] if nozzle else [],
+        "bed": temp("heater_bed"),
+        "chamber": temp("temperature_sensor chamber_temp"),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Servicio
 # ---------------------------------------------------------------------------
@@ -198,9 +310,18 @@ def _credentials(printer: Printer):
     return None
 
 
+def _moonraker_credentials(printer: Printer):
+    config = printer.connection_config or {}
+    host = config.get("ip_address") or printer.ip_address
+    if not host:
+        return None
+    port = int(_num(config.get("port")) or 7125)
+    return ("moonraker", host.strip(), port, config.get("api_key") or None)
+
+
 class PrinterLiveService:
     def __init__(self):
-        self._clients: Dict[int, LiveClient] = {}
+        self._clients: Dict[int, Any] = {}  # LiveClient o MoonrakerClient
         self._creds: Dict[int, tuple] = {}
         self._task: Optional[asyncio.Task] = None
 
@@ -248,8 +369,11 @@ class PrinterLiveService:
         """Conecta impresoras nuevas, reconecta si cambian sus datos y suelta las borradas."""
         db = SessionLocal()
         try:
-            printers = db.query(Printer).filter(Printer.active.is_(True), Printer.brand == "bambulab").all()
-            wanted = {p.id: _credentials(p) for p in printers}
+            printers = db.query(Printer).filter(Printer.active.is_(True), Printer.brand.in_(LIVE_BRANDS)).all()
+            wanted = {
+                p.id: _moonraker_credentials(p) if p.brand in MOONRAKER_BRANDS else _credentials(p)
+                for p in printers
+            }
         finally:
             db.close()
 
@@ -258,9 +382,13 @@ class PrinterLiveService:
                 self._drop(printer_id)
         for printer_id, creds in wanted.items():
             if creds and printer_id not in self._clients:
-                host, serial, code = creds
-                client = LiveClient(printer_id=printer_id, host=host, serial=serial, access_code=code)
-                client.connect()
+                if creds[0] == "moonraker":
+                    _, host, port, api_key = creds
+                    client = MoonrakerClient(printer_id, host, port, api_key)
+                else:
+                    host, serial, code = creds
+                    client = LiveClient(printer_id=printer_id, host=host, serial=serial, access_code=code)
+                    client.connect()
                 self._clients[printer_id] = client
                 self._creds[printer_id] = creds
                 logger.info(f"Leyendo impresora {printer_id} en {host}")
@@ -269,6 +397,8 @@ class PrinterLiveService:
         """Guarda estado y última conexión, para que el resto de FilaOps lo vea."""
         if not self._clients:
             return
+        for client in list(self._clients.values()):
+            client.poll()
         live = self.live()
         db = SessionLocal()
         try:
@@ -287,10 +417,7 @@ class PrinterLiveService:
             db.close()
 
     def live(self) -> Dict[int, Dict[str, Any]]:
-        return {
-            printer_id: summarize(client.get_cached_status(), client.connect_error)
-            for printer_id, client in list(self._clients.items())
-        }
+        return {printer_id: client.summary() for printer_id, client in list(self._clients.items())}
 
     def configured(self, printer_id: int) -> bool:
         return printer_id in self._clients

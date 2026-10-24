@@ -57,6 +57,7 @@ function OfflineReason({ printer }) {
     );
   }
   if (printer.live?.connect_error === "bad_access_code") return <span>Wrong access code.</span>;
+  if (printer.live?.connect_error === "bad_api_key") return <span>Wrong Moonraker API key.</span>;
   return <span>Not responding. Check that it is on and connected to the network.</span>;
 }
 
