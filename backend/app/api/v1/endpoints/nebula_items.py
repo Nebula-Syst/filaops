@@ -1,4 +1,5 @@
-"""PrintFlow: precios por cantidad, archivos 3MF e importación de artículos.
+"""PrintFlow: precios por cantidad, archivos 3MF, importación de artículos y
+enlaces a las tiendas online.
 
 Rutas bajo /api/v1/items (se registran antes que las de FilaOps para que
 /items/nebula/... no choque con /items/{item_id}).
@@ -8,7 +9,8 @@ import os
 import re
 import uuid
 from pathlib import Path
-from typing import List, Optional
+from datetime import datetime, timezone
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response
@@ -19,7 +21,7 @@ from app.api.v1.deps import get_current_staff_user
 from app.core.paths import BACKEND_DIR
 from app.db.session import get_db
 from app.logging_config import get_logger
-from app.models.nebula_product import ProductFile
+from app.models.nebula_product import ProductFile, ProductShopLink
 from app.models.product import Product
 from app.models.user import User
 from app.services import nebula_import
@@ -349,3 +351,54 @@ async def import_items(
         default_item_type=default_item_type,
         default_category_id=default_category_id,
     )
+
+
+# ---------------------------------------------------------------------------
+# Enlaces a las tiendas online
+# ---------------------------------------------------------------------------
+
+
+class ShopLinkIn(BaseModel):
+    store: str = Field(..., min_length=1, max_length=200)
+    url: str = Field(..., pattern=r"^https?://", max_length=500)
+
+
+class ShopLinksIn(BaseModel):
+    links: Dict[int, List[ShopLinkIn]]
+
+
+@router.put("/nebula/shop-links")
+def replace_shop_links(
+    body: ShopLinksIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_staff_user),
+):
+    """La sincronización de las tiendas manda todos los enlaces y se sustituyen."""
+    known = {pid for (pid,) in db.query(Product.id).filter(Product.id.in_(list(body.links) or [0]))}
+    now = datetime.now(timezone.utc)
+    db.query(ProductShopLink).delete(synchronize_session=False)
+    count = 0
+    for product_id, links in body.links.items():
+        if product_id not in known:
+            continue
+        for link in links:
+            db.add(ProductShopLink(product_id=product_id, store=link.store, url=link.url, updated_at=now))
+            count += 1
+    db.commit()
+    return {"links": count}
+
+
+@router.get("/{item_id}/shop-links")
+def get_shop_links(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_staff_user),
+):
+    _product(db, item_id)
+    links = (
+        db.query(ProductShopLink)
+        .filter(ProductShopLink.product_id == item_id)
+        .order_by(ProductShopLink.store)
+        .all()
+    )
+    return [{"store": l.store, "url": l.url} for l in links]

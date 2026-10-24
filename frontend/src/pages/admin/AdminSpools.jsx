@@ -4,6 +4,7 @@ import { useToast } from "../../components/Toast";
 import EmptyState from "../../components/EmptyState";
 import { SPOOL_COLORS as statusColors } from "../../lib/statusColors.js";
 import { normalizeList } from "../../lib/normalizeList";
+import SpoolsByWorkshop from "../../nebula/SpoolsByWorkshop"; // PrintFlow
 
 export default function AdminSpools() {
   const toast = useToast();
@@ -103,6 +104,9 @@ export default function AdminSpools() {
           + Add Spool
         </button>
       </div>
+
+      {/* PrintFlow: bobinas por taller, marca y color */}
+      <SpoolsByWorkshop locations={locations} onChanged={fetchSpools} />
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">

@@ -32,6 +32,7 @@ class MaterialSpool(Base):
     
     # Location tracking
     location_id = Column(Integer, ForeignKey('inventory_locations.id'), nullable=True)
+    brand = Column(String(100), nullable=True)  # PrintFlow: marca (Elegoo, Bambu…)
     
     # Traceability
     supplier_lot_number = Column(String(100), nullable=True)  # Supplier's lot/batch number

@@ -4186,7 +4186,25 @@
   "serial number": "número de serie",
   "access code": "código de acceso",
   "Right nozzle": "Boquilla derecha",
-  "Left nozzle": "Boquilla izquierda"
+  "Left nozzle": "Boquilla izquierda",
+  "Spools by workshop": "Bobinas por taller",
+  "Add spools": "Añadir bobinas",
+  "Search: black, PLA, PETG…": "Buscar: negro, PLA, PETG…",
+  "Spool weight (g)": "Peso de la bobina (g)",
+  "Remaining (g)": "Le queda (g)",
+  "How many": "Cuántas",
+  "Workshop": "Taller",
+  "No workshop": "Sin taller",
+  "Used up": "Gastada",
+  "Search brand or colour…": "Buscar marca o color…",
+  "No spools yet. Use “Add spools” to register the ones you have.": "Todavía no hay bobinas. Usa «Añadir bobinas» para registrar las que tienes.",
+  "1 spool": "1 bobina",
+  "In the online shop": "En la tienda online",
+  "Copy link": "Copiar enlace",
+  "Copied": "Copiado",
+  "Copy the link": "Copia el enlace",
+  "Could not save": "No se ha podido guardar",
+  "Full spool": "Llena"
  },
  "patterns": [
   [
@@ -5424,6 +5442,10 @@
   [
    "Printer error {0}",
    "Error de la impresora: {0}"
+  ],
+  [
+   "{0} spools",
+   "{0} bobinas"
   ]
  ],
  "ignored": [

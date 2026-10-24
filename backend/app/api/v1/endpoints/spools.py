@@ -85,6 +85,7 @@ async def list_spools(
                 "expiry_date": spool.expiry_date.isoformat() if spool.expiry_date else None,  # type: ignore[union-attr]
                 "location_id": spool.location_id,
                 "location_name": spool.location.name if spool.location else None,
+                "brand": spool.brand,  # PrintFlow
                 "supplier_lot_number": spool.supplier_lot_number,
                 "notes": spool.notes,
                 "is_low": bool(spool.is_low) if hasattr(spool, 'is_low') else False,
@@ -132,6 +133,7 @@ async def get_spool(
         "expiry_date": spool.expiry_date.isoformat() if spool.expiry_date else None,  # type: ignore[union-attr]
         "location_id": spool.location_id,
         "location_name": spool.location.name if spool.location else None,
+        "brand": spool.brand,  # PrintFlow
         "supplier_lot_number": spool.supplier_lot_number,
         "notes": spool.notes,
         "is_low": bool(spool.is_low) if hasattr(spool, 'is_low') else False,
@@ -413,6 +415,7 @@ async def get_available_spools(
                 "current_weight_kg": float(spool.current_weight_kg or 0),
                 "weight_remaining_percent": float(spool.weight_remaining_percent) if hasattr(spool, 'weight_remaining_percent') else 0,
                 "location_name": spool.location.name if spool.location else None,
+                "brand": spool.brand,  # PrintFlow
                 "supplier_lot_number": spool.supplier_lot_number,
             }
             for spool in spools
