@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 
 from app.api.v1.endpoints.nebula_printers import _stem
-from app.services.nebula_printer_live import LiveClient, _deep_merge, summarize
+from app.services.nebula_printer_live import LiveClient, MoonrakerClient, _deep_merge, summarize, summarize_moonraker
 
 
 def _now():
@@ -92,3 +92,60 @@ def test_file_stem():
     assert _stem("Nazareno 20cm.gcode.3mf") == "nazareno 20cm"
     assert _stem("Nazareno_20cm_plate_1") == "nazareno 20cm"
     assert _stem("Nazareno-20cm.3mf") == "nazareno 20cm"
+
+
+def _moonraker(state, **stats):
+    return {
+        "print_stats": {"state": state, "filename": "Nazareno 20cm.gcode", "print_duration": 1800, "info": {"current_layer": 40, "total_layer": None}, **stats},
+        "display_status": {"progress": 0.25},
+        "virtual_sdcard": {"progress": 0.24, "layer": 40, "layer_count": 160},
+        "extruder": {"temperature": 219.6, "target": 220.0},
+        "heater_bed": {"temperature": 59.9, "target": 60.0},
+        "temperature_sensor chamber_temp": {},
+    }
+
+
+def test_moonraker_printing():
+    s = summarize_moonraker(_moonraker("printing"), _now())
+    assert s["online"] and s["status"] == "printing" and s["state"] == "RUNNING"
+    assert s["percent"] == 25 and s["remaining_minutes"] == 90  # 30 min = 25 %
+    assert s["layer"] == 40 and s["total_layers"] == 160
+    assert s["file"] == "Nazareno 20cm.gcode"
+    assert s["nozzles"] == [{"current": 219.6, "target": 220.0}]
+    assert s["bed"] == {"current": 59.9, "target": 60.0}
+    assert s["chamber"] is None and s["ams"] == []
+
+
+def test_moonraker_idle_and_offline():
+    s = summarize_moonraker(_moonraker("standby", filename=""), _now())
+    assert s["status"] == "idle" and s["percent"] is None and s["file"] is None
+    assert summarize_moonraker(_moonraker("printing"), None)["status"] == "offline"
+    assert summarize_moonraker(_moonraker("printing"), "2020-01-01T00:00:00+00:00")["status"] == "offline"
+    assert summarize_moonraker(_moonraker("error"), _now())["state"] == "FAILED"
+
+
+def test_moonraker_poll(monkeypatch):
+    import httpx
+
+    calls = []
+
+    def fake_post(url, json, headers, timeout):
+        calls.append((url, headers))
+        return httpx.Response(200, json={"result": {"status": _moonraker("paused")}}, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    client = MoonrakerClient(3, "192.168.31.45", 7125, "clave")
+    client.poll()
+    assert calls == [("http://192.168.31.45:7125/printer/objects/query", {"X-Api-Key": "clave"})]
+    assert client.summary()["status"] == "paused"
+
+    monkeypatch.setattr(httpx, "post", lambda url, **kw: httpx.Response(401, request=httpx.Request("POST", url)))
+    client.poll()
+    assert client.connect_error == "bad_api_key"
+
+    def boom(url, **kw):
+        raise httpx.ConnectError("apagada")
+
+    monkeypatch.setattr(httpx, "post", boom)
+    client.poll()  # no revienta y se queda con el último estado
+    assert client.summary()["state"] == "PAUSE"

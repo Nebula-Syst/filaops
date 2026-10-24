@@ -16,9 +16,30 @@ from app.models.nebula_product import ProductFile
 from app.models.product import Product
 from app.models.production_order import ProductionOrder
 from app.models.user import User
-from app.services.nebula_printer_live import service
+from app.api.v1.endpoints.printers import register_brand
+from app.schemas.printer import PrinterBrandInfo, PrinterModelInfo
+from app.services.nebula_printer_live import LIVE_BRANDS, MOONRAKER_BRANDS, service
+from app.services.printer_discovery.adapters.klipper import KlipperAdapter
 
 router = APIRouter()
+
+# Creality y Klipper: en FilaOps vienen con PRO; en PrintFlow se leen por Moonraker
+_klipper = KlipperAdapter()
+_CREALITY_MODELS = ["Ender-3 V3", "Ender-3 V3 KE", "Ender-3 V3 Plus", "K1", "K1C", "K1 SE", "K1 Max", "K2 Plus", "Hi"]
+register_brand(PrinterBrandInfo(
+    code="creality",
+    name="Creality",
+    supports_discovery=False,
+    models=[PrinterModelInfo(value=m, label=f"Creality {m}") for m in _CREALITY_MODELS],
+    connection_fields=_klipper.get_connection_fields(),
+))
+register_brand(PrinterBrandInfo(
+    code="klipper",
+    name=_klipper.brand_name,
+    supports_discovery=False,
+    models=[PrinterModelInfo(value=m["value"], label=m["label"]) for m in _klipper.get_supported_models()],
+    connection_fields=_klipper.get_connection_fields(),
+))
 
 OPEN_ORDER_STATUSES = ("released", "scheduled", "in_progress")
 
@@ -72,7 +93,7 @@ def printers_live(
     live = service.live()
     printers = (
         db.query(Printer)
-        .filter(Printer.active.is_(True), Printer.brand == "bambulab")
+        .filter(Printer.active.is_(True), Printer.brand.in_(LIVE_BRANDS))
         .order_by(Printer.code)
         .all()
     )
@@ -80,15 +101,13 @@ def printers_live(
     for printer in printers:
         summary = live.get(printer.id)
         config = printer.connection_config or {}
-        missing = [
-            field
-            for field, value in (
-                ("ip_address", config.get("ip_address") or printer.ip_address),
+        required = [("ip_address", config.get("ip_address") or printer.ip_address)]
+        if printer.brand not in MOONRAKER_BRANDS:
+            required += [
                 ("serial_number", config.get("serial") or printer.serial_number),
                 ("access_code", config.get("access_code") or config.get("mqtt_access_code")),
-            )
-            if not value
-        ]
+            ]
+        missing = [field for field, value in required if not value]
         item = {
             "id": printer.id,
             "code": printer.code,
