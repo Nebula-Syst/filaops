@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from app.models import MaterialSpool
 from app.models.inventory import Inventory, InventoryLocation
-from app.models.nebula_product import ProductShopLink
+from app.models.nebula_product import ProductShopLink, ProductShopStore, ShopStore
 
 
 def _location(db, name="Taller prueba"):
@@ -94,3 +94,52 @@ class TestShopLinks:
         db.commit()
         res = client.put("/api/v1/items/nebula/shop-links", json={"links": {str(a.id): [{"store": "S", "url": "javascript:alert(1)"}]}})
         assert res.status_code == 422
+
+
+class TestShopStores:
+    STORES = [
+        {"id": "sc_gl", "name": "GL Printworks", "domains": ["glprintworks.com"]},
+        {"id": "sc_al", "name": "Los Aliados", "domains": ["losaliados.glprintworks.com"]},
+    ]
+
+    def _clean(self, db):
+        db.query(ProductShopStore).delete()
+        db.query(ShopStore).delete()
+        db.commit()
+
+    def test_seed_only_once_then_printflow_rules(self, client, db, make_product):
+        self._clean(db)
+        a, b = make_product(), make_product()
+        db.commit()
+        res = client.put("/api/v1/items/nebula/shops", json={
+            "stores": self.STORES,
+            "seed": {str(a.id): ["sc_al"], str(b.id): ["sc_al", "sc_desconocida"], "999999": ["sc_al"]},
+        })
+        assert res.status_code == 200, res.text
+        assert res.json()["assignments"] == {str(a.id): ["sc_al"], str(b.id): ["sc_al"]}
+
+        # Se elige en PrintFlow: a va solo a GL
+        res = client.put(f"/api/v1/items/{a.id}/shops", json={"store_ids": ["sc_gl"]})
+        assert res.status_code == 200, res.text
+        assert {st["id"]: st["selected"] for st in res.json()["stores"]} == {"sc_gl": True, "sc_al": False}
+
+        # Una semilla posterior ya no pisa lo elegido
+        res = client.put("/api/v1/items/nebula/shops", json={"stores": self.STORES, "seed": {str(a.id): ["sc_al"]}})
+        assert res.json()["assignments"][str(a.id)] == ["sc_gl"]
+
+        assert client.put(f"/api/v1/items/{a.id}/shops", json={"store_ids": ["sc_x"]}).status_code == 400
+
+    def test_removed_store_drops_assignments_and_empty_list_is_ignored(self, client, db, make_product):
+        self._clean(db)
+        a = make_product()
+        db.commit()
+        client.put("/api/v1/items/nebula/shops", json={"stores": self.STORES})
+        client.put(f"/api/v1/items/{a.id}/shops", json={"store_ids": ["sc_gl", "sc_al"]})
+
+        assert client.put("/api/v1/items/nebula/shops", json={"stores": []}).json()["stores"] == 2
+
+        res = client.put("/api/v1/items/nebula/shops", json={"stores": self.STORES[:1]})
+        assert res.json()["stores"] == 1
+        assert res.json()["assignments"] == {str(a.id): ["sc_gl"]}
+        names = [st["name"] for st in client.get(f"/api/v1/items/{a.id}/shops").json()["stores"]]
+        assert names == ["GL Printworks"]

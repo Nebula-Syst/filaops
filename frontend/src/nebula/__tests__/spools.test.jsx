@@ -115,19 +115,47 @@ describe('SpoolsByWorkshop', () => {
   })
 })
 
-describe('ShopLinks', () => {
-  it('enseña el enlace de la tienda', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
-      json([{ store: 'Los Aliados', url: 'https://glprintworks.com/es/products/nazareno' }]),
-    )
-    render(<ShopLinks item={{ id: 7 }} />)
-    const link = await screen.findByText('https://glprintworks.com/es/products/nazareno')
-    expect(link).toHaveAttribute('href', 'https://glprintworks.com/es/products/nazareno')
-    expect(screen.getByText('Los Aliados')).toBeInTheDocument()
+const STORES = [
+  { id: 'sc_gl', name: 'GL Printworks', domains: ['glprintworks.com'], selected: false },
+  { id: 'sc_al', name: 'Los Aliados', domains: ['losaliados.glprintworks.com'], selected: true },
+]
+const LINK = 'https://losaliados.glprintworks.com/es/products/nazareno'
+
+const shopFetch = (stores = STORES) =>
+  vi.spyOn(globalThis, 'fetch').mockImplementation((url, opts) => {
+    if (opts?.method === 'PUT') {
+      const ids = JSON.parse(opts.body).store_ids
+      return json({ stores: stores.map((s) => ({ ...s, selected: ids.includes(s.id) })) })
+    }
+    if (String(url).endsWith('/shops')) return json({ stores })
+    return json([{ store: 'Los Aliados', url: LINK }])
   })
 
-  it('no pinta nada si no está en ninguna tienda', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(() => json([]))
+describe('ShopLinks', () => {
+  it('enseña las tiendas marcadas y el enlace de la tienda', async () => {
+    shopFetch()
+    render(<ShopLinks item={{ id: 7 }} />)
+    const link = await screen.findByText(LINK)
+    expect(link).toHaveAttribute('href', LINK)
+    expect(screen.getByLabelText(/Los Aliados/)).toBeChecked()
+    expect(screen.getByLabelText(/GL Printworks/)).not.toBeChecked()
+  })
+
+  it('guarda al marcar una tienda', async () => {
+    const fetchMock = shopFetch()
+    render(<ShopLinks item={{ id: 7 }} />)
+    fireEvent.click(await screen.findByLabelText(/GL Printworks/))
+    await waitFor(() => {
+      const put = fetchMock.mock.calls.find(([, o]) => o?.method === 'PUT')
+      expect(put[0]).toMatch(/\/api\/v1\/items\/7\/shops$/)
+      expect(JSON.parse(put[1].body)).toEqual({ store_ids: ['sc_gl', 'sc_al'] })
+    })
+    expect(await screen.findByText(/The shop will update/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/GL Printworks/)).toBeChecked()
+  })
+
+  it('no pinta nada si aún no hay tiendas', async () => {
+    const fetchMock = shopFetch([])
     const { container } = render(<ShopLinks item={{ id: 7 }} />)
     await waitFor(() => expect(fetchMock).toHaveBeenCalled())
     expect(container).toBeEmptyDOMElement()

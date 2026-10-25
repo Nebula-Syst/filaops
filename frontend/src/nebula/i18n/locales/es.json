@@ -4205,7 +4205,11 @@
   "Copy the link": "Copia el enlace",
   "Could not save": "No se ha podido guardar",
   "Full spool": "Llena",
-  "Wrong Moonraker API key.": "Clave de API de Moonraker incorrecta."
+  "Wrong Moonraker API key.": "Clave de API de Moonraker incorrecta.",
+  "Online shops": "Tiendas online",
+  "Choose the shops where this item is sold.": "Elige en qué tiendas se vende este artículo.",
+  "Saved. The shop will update in a few minutes.": "Guardado. La tienda se actualizará en unos minutos.",
+  "Could not save. Try again.": "No se ha podido guardar. Inténtalo de nuevo."
  },
  "patterns": [
   [

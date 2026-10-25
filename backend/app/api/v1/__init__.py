@@ -47,6 +47,7 @@ from app.api.v1.endpoints import (
     operation_types,
     nebula_items,
     nebula_printers,
+    nebula_shops,
     nebula_spools,
 )
 from app.api.v1.endpoints.admin import router as admin_router
@@ -76,6 +77,7 @@ router.include_router(
 # PrintFlow: precios por cantidad, 3MF e importación (antes que items para que
 # /items/nebula/... no lo capture /items/{item_id})
 router.include_router(nebula_items.router, prefix="/items", tags=["items"])
+router.include_router(nebula_shops.router, prefix="/items", tags=["items"])
 
 # Items (unified item management)
 router.include_router(
