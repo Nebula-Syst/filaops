@@ -7,11 +7,13 @@
   puede tener varios si el producto lleva varias placas o piezas.
 - ``ProductShopLink``: la ficha del artículo en cada tienda online; la rellena
   la sincronización de las tiendas.
+- ``ShopStore`` / ``ProductShopStore``: las tiendas online y qué artículos van
+  a cada una (se elige en PrintFlow y la tienda lo obedece).
 """
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    BigInteger, CheckConstraint, Column, DateTime, ForeignKey, Integer, Numeric,
+    JSON, BigInteger, CheckConstraint, Column, DateTime, ForeignKey, Integer, Numeric,
     String, Text, UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
@@ -60,3 +62,19 @@ class ProductShopLink(Base):
     store = Column(String(200), nullable=False)
     url = Column(String(500), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class ShopStore(Base):
+    __tablename__ = "shop_stores"
+
+    id = Column(String(100), primary_key=True)  # canal de venta de Medusa
+    name = Column(String(200), nullable=False)
+    domains = Column(JSON, nullable=True)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class ProductShopStore(Base):
+    __tablename__ = "product_shop_stores"
+
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), primary_key=True)
+    store_id = Column(String(100), ForeignKey("shop_stores.id", ondelete="CASCADE"), primary_key=True)
