@@ -89,6 +89,10 @@ export default function OrderLineItemsTable({ order, orderId, onOrderUpdated }) 
                   <tr key={line.id || idx}>
                     <td className="py-2 px-3 text-[var(--ink)]">
                       {lineLabel}
+                      {/* PrintFlow: colores y descripción que pidió el cliente en la tienda */}
+                      {line.notes && (
+                        <div className="mt-1 whitespace-pre-line text-xs text-[var(--ink-3)]">{line.notes}</div>
+                      )}
                     </td>
                     <td className="py-2 px-3 text-[var(--ink-3)] font-mono text-xs">
                       {lineCode}
