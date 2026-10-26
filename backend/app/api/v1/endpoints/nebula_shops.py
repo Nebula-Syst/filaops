@@ -11,6 +11,10 @@
 - Cajas: cada artículo puede llevar una caja (artículo de embalaje) cuyo coste
   se suma a su precio en la tienda.
 - Envío a domicilio: su precio, igual para todas las tiendas.
+- Personalización: qué elige el cliente en cada producto (un color, colores y
+  una descripción, o pintarlo en la web).
+- Colores: los filamentos con bobinas empezadas o llenas, con el nombre que se
+  les da en la tienda; un color sin bobinas desaparece solo.
 
 Rutas bajo /api/v1/items (se registran antes que las de FilaOps para que
 /items/nebula/... no choque con /items/{item_id}).
@@ -21,11 +25,13 @@ from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1.deps import get_current_staff_user
 from app.db.session import get_db
-from app.models.nebula_product import ProductShopOption, ProductShopStore, ShopSettings, ShopStore
+from app.models.material import Color
+from app.models.material_spool import MaterialSpool
+from app.models.nebula_product import ProductShopOption, ProductShopStore, ShopColor, ShopSettings, ShopStore
 from app.models.product import Product
 from app.models.user import User
 
@@ -72,6 +78,18 @@ class ShopSettingsIn(BaseModel):
     home_shipping_price: Decimal = Field(..., ge=0, le=10000)
 
 
+CUSTOMIZATIONS = ("none", "color", "describe", "paint")
+
+
+class ShopCustomizationIn(BaseModel):
+    customization: str = Field(..., pattern="^(none|color|describe|paint)$")
+
+
+class ShopColorIn(BaseModel):
+    shop_name: Optional[str] = Field(None, max_length=100)
+    hidden: bool = False
+
+
 def box_cost(box: Optional[Product]) -> Decimal:
     """Coste de una caja: el estándar si se costea así; si no, el medio, el último o el estándar."""
     if box is None:
@@ -107,6 +125,54 @@ def _assignments(db: Session) -> Dict[int, List[str]]:
     for row in db.query(ProductShopStore).order_by(ProductShopStore.product_id, ProductShopStore.store_id):
         result.setdefault(row.product_id, []).append(row.store_id)
     return result
+
+
+def shop_colors(db: Session, include_hidden: bool = False) -> List[dict]:
+    """Un color por filamento (material + color) con bobinas activas que no estén vacías."""
+    spools = (
+        db.query(MaterialSpool)
+        .options(
+            joinedload(MaterialSpool.product).joinedload(Product.color),
+            joinedload(MaterialSpool.product).joinedload(Product.material_type),
+        )
+        .filter(MaterialSpool.status == "active", MaterialSpool.current_weight_kg > 0)
+        .all()
+    )
+    names = {c.color_id: c for c in db.query(ShopColor)}
+    result: Dict[int, dict] = {}
+    for spool in spools:
+        material = spool.product
+        if material is None or material.color is None or not material.active:
+            continue
+        color = material.color
+        custom = names.get(color.id)
+        if custom and custom.hidden and not include_hidden:
+            continue
+        entry = result.get(material.id)
+        if entry is None:
+            mtype = material.material_type
+            entry = result[material.id] = {
+                "material_id": material.id,
+                "color_id": color.id,
+                "name": (custom.shop_name if custom and custom.shop_name else None) or color.name,
+                "color_name": color.name,
+                "hex": color.hex_code,
+                "hex_secondary": color.hex_code_secondary,
+                "material_code": mtype.code if mtype else None,
+                "material": mtype.name if mtype else None,
+                "brands": [],
+                "remaining_g": 0.0,
+                "hidden": bool(custom and custom.hidden),
+            }
+        entry["remaining_g"] += float(spool.current_weight_kg or 0)
+        if spool.brand and spool.brand not in entry["brands"]:
+            entry["brands"].append(spool.brand)
+    colors = list(result.values())
+    for entry in colors:
+        entry["remaining_g"] = round(entry["remaining_g"], 1)
+        entry["brands"].sort(key=str.lower)
+    colors.sort(key=lambda c: ((c["material_code"] or "~"), c["name"].lower()))
+    return colors
 
 
 @router.put("/nebula/shops")
@@ -163,9 +229,11 @@ def shop_catalog(
                 "size_label": r.size_label if r.group_id else None,
                 "position": r.position or 0,
                 "box_cost": float(box_cost(boxes.get(r.box_id))),
+                "customization": r.customization or "none",
             }
             for r in rows
         },
+        "colors": shop_colors(db),
     }
 
 
@@ -226,6 +294,7 @@ def get_item_shop_options(
         "size_label": option.size_label if group else None,
         "box_id": box.id if box else None,
         "box_cost": float(box_cost(box)),
+        "customization": (option.customization if option else None) or "none",
         "sizes": [
             {
                 **_ref(p),
@@ -315,6 +384,53 @@ def put_item_shop_box(
     _option(db, item_id).box_id = body.box_id
     db.commit()
     return get_item_shop_options(item_id, db, current_user)
+
+
+@router.put("/{item_id}/shop-customization")
+def put_item_shop_customization(
+    item_id: int,
+    body: ShopCustomizationIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_staff_user),
+):
+    """Qué elige el cliente en la tienda. Un tamaño usa la de su producto."""
+    _product(db, item_id)
+    own = db.get(ProductShopOption, item_id)
+    if own and own.group_id and body.customization != "none":
+        raise HTTPException(status_code=400, detail="Un tamaño usa la personalización de su producto")
+    _option(db, item_id).customization = body.customization
+    db.commit()
+    return get_item_shop_options(item_id, db, current_user)
+
+
+@router.get("/nebula/shop-colors")
+def get_shop_colors(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_staff_user),
+):
+    """Colores con bobinas, también los ocultos, para ponerles nombre en la tienda."""
+    return {"colors": shop_colors(db, include_hidden=True)}
+
+
+@router.put("/nebula/shop-colors/{color_id}")
+def put_shop_color(
+    color_id: int,
+    body: ShopColorIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_staff_user),
+):
+    """Nombre del color en la tienda (vacío: el de PrintFlow) y si se oculta."""
+    if db.get(Color, color_id) is None:
+        raise HTTPException(status_code=404, detail="Color no encontrado")
+    row = db.get(ShopColor, color_id)
+    if row is None:
+        row = ShopColor(color_id=color_id)
+        db.add(row)
+    row.shop_name = " ".join((body.shop_name or "").split()) or None
+    row.hidden = body.hidden
+    row.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"color_id": color_id, "shop_name": row.shop_name, "hidden": row.hidden}
 
 
 @router.get("/{item_id}/shops")

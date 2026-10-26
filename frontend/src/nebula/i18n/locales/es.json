@@ -4225,7 +4225,17 @@
   "Home delivery price": "Precio del envío a domicilio",
   "Choose the shops where this item is sold.": "Elige en qué tiendas se vende este artículo.",
   "Saved. The shop will update in a few minutes.": "Guardado. La tienda se actualizará en unos minutos.",
-  "Could not save. Try again.": "No se ha podido guardar. Inténtalo de nuevo."
+  "Could not save. Try again.": "No se ha podido guardar. Inténtalo de nuevo.",
+  "What the customer chooses": "Qué elige el cliente",
+  "Nothing: always the same": "Nada: siempre sale igual",
+  "One colour": "Un color",
+  "Colours and a description": "Colores y una descripción",
+  "Paint it on the web": "Pintarlo en la web",
+  "The colours offered are the ones with spools in stock.": "Se ofrecen los colores de los que hay bobinas.",
+  "Colours in the shop": "Colores en la tienda",
+  "The shop offers the colours with spools in stock. Give each one the name customers will see, or hide it.": "La tienda ofrece los colores de los que hay bobinas. Ponle a cada uno el nombre que verá el cliente, u ocúltalo.",
+  "There are no spools in stock.": "No hay bobinas en stock.",
+  "Name in the shop": "Nombre en la tienda"
  },
  "patterns": [
   [

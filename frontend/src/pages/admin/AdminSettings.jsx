@@ -14,6 +14,7 @@ import SerialNumberSettingsSection from "../../components/settings/SerialNumberS
 import { useApp } from "../../contexts/AppContext";
 import LanguageSettings from "../../nebula/i18n/LanguageSettings";
 import ShopSettings from "../../nebula/ShopSettings"; // PrintFlow
+import ShopColors from "../../nebula/ShopColors"; // PrintFlow
 
 const AdminSettings = () => {
   const api = useApi();
@@ -277,6 +278,7 @@ const AdminSettings = () => {
 
       <LanguageSettings />
       <ShopSettings />
+      <ShopColors />
 
       {smtpConfigured === false && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">

@@ -12,11 +12,12 @@
 - ``ProductShopOption``: el artículo como tamaño de otro (en la tienda sale una
   ficha con selector de tamaño) y la caja cuyo coste se suma a su precio.
 - ``ShopSettings``: lo común a las tiendas (precio del envío a domicilio).
+- ``ShopColor``: nombre de un color en la tienda y si se oculta.
 """
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    JSON, BigInteger, CheckConstraint, Column, DateTime, ForeignKey, Integer, Numeric,
+    JSON, BigInteger, Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, Numeric,
     String, Text, UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
@@ -87,6 +88,9 @@ class ProductShopOption(Base):
     __tablename__ = "product_shop_options"
     __table_args__ = (
         CheckConstraint("group_id IS NULL OR group_id <> product_id", name="ck_product_shop_options_group"),
+        CheckConstraint(
+            "customization IN ('none', 'color', 'describe', 'paint')", name="ck_product_shop_options_customization"
+        ),
     )
 
     product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), primary_key=True)
@@ -96,6 +100,8 @@ class ProductShopOption(Base):
     position = Column(Integer, nullable=False, default=0)
     # Caja (artículo de embalaje): su coste se suma al precio en la tienda
     box_id = Column(Integer, ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
+    # Qué elige el cliente: none, color (uno), describe (colores + descripción), paint (lo pinta en la web)
+    customization = Column(String(20), nullable=False, default="none", server_default="none")
 
 
 class ShopSettings(Base):
@@ -104,4 +110,14 @@ class ShopSettings(Base):
 
     id = Column(Integer, primary_key=True, default=1)
     home_shipping_price = Column(Numeric(10, 2), nullable=False, default=0)
+    updated_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class ShopColor(Base):
+    """Un color en la tienda: su nombre para el cliente y si se oculta aunque haya bobinas."""
+    __tablename__ = "shop_colors"
+
+    color_id = Column(Integer, ForeignKey("colors.id", ondelete="CASCADE"), primary_key=True)
+    shop_name = Column(String(100), nullable=True)
+    hidden = Column(Boolean, nullable=False, default=False, server_default="false")
     updated_at = Column(DateTime(timezone=True), nullable=True)
