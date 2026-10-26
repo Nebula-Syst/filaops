@@ -13,6 +13,7 @@ import QualitySettingsSection from "../../components/settings/QualitySettingsSec
 import SerialNumberSettingsSection from "../../components/settings/SerialNumberSettingsSection";
 import { useApp } from "../../contexts/AppContext";
 import LanguageSettings from "../../nebula/i18n/LanguageSettings";
+import ShopSettings from "../../nebula/ShopSettings"; // PrintFlow
 
 const AdminSettings = () => {
   const api = useApi();
@@ -275,6 +276,7 @@ const AdminSettings = () => {
       </div>
 
       <LanguageSettings />
+      <ShopSettings />
 
       {smtpConfigured === false && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">

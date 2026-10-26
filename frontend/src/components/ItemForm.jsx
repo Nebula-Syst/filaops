@@ -21,6 +21,7 @@ import StockAdjuster from "../nebula/StockAdjuster"; // PrintFlow
 import PriceTiersEditor from "../nebula/PriceTiersEditor"; // PrintFlow
 import ProductFiles from "../nebula/ProductFiles"; // PrintFlow
 import ShopLinks from "../nebula/ShopLinks"; // PrintFlow
+import ShopOptions from "../nebula/ShopOptions"; // PrintFlow
 
 const PROCUREMENT_TYPES = [
   { value: "make", label: "Make (Manufactured)" },
@@ -776,6 +777,7 @@ export default function ItemForm({
             {editingItem && !editingItem.is_template && !editingItem.material_type_id ? (
               <div className="space-y-4">
                 <ShopLinks key={`links-${editingItem.id}`} item={editingItem} />
+                <ShopOptions key={`options-${editingItem.id}`} item={editingItem} />
                 <PriceTiersEditor key={`tiers-${editingItem.id}`} item={editingItem} />
                 <ProductFiles key={`files-${editingItem.id}`} item={editingItem} />
               </div>

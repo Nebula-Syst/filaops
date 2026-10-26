@@ -59,7 +59,7 @@ from app.models.tax_rate import TaxRate
 from app.models.system_setting import SystemSetting
 
 # PrintFlow: precios por cantidad y archivos 3MF por artículo
-from app.models.nebula_product import ProductPriceTier, ProductFile, ProductShopLink, ProductShopStore, ShopStore
+from app.models.nebula_product import ProductPriceTier, ProductFile, ProductShopLink, ProductShopOption, ProductShopStore, ShopSettings, ShopStore
 
 __all__ = [
     # Item management
