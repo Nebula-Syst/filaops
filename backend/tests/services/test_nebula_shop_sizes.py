@@ -31,8 +31,8 @@ class TestShopSizes:
         assert res.json()["box_cost"] == 0.75
 
         catalog = client.get("/api/v1/items/nebula/shop-catalog").json()
-        assert catalog["options"][str(small.id)] == {"group_id": head.id, "size_label": "6 cm", "position": 0, "box_cost": 0.0}
-        assert catalog["options"][str(big.id)] == {"group_id": head.id, "size_label": "10 cm", "position": 1, "box_cost": 0.75}
+        assert catalog["options"][str(small.id)] == {"group_id": head.id, "size_label": "6 cm", "position": 0, "box_cost": 0.0, "customization": "none"}
+        assert catalog["options"][str(big.id)] == {"group_id": head.id, "size_label": "10 cm", "position": 1, "box_cost": 0.75, "customization": "none"}
 
         # Quitar un tamaño lo saca del grupo pero conserva su caja
         res = client.put(f"/api/v1/items/{head.id}/shop-sizes", json={"sizes": [{"product_id": small.id, "size_label": "6 cm"}]})

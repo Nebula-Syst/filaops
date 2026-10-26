@@ -10,6 +10,8 @@ import { formatCurrency } from "../lib/number";
  *   nombre, descripción, foto, categoría y tiendas de este artículo.
  * - Caja: un artículo de embalaje cuyo coste se suma al precio en la tienda.
  *   Con tamaños, cada tamaño lleva la suya.
+ * - Personalización: qué elige el cliente (un color, colores y una descripción,
+ *   o pintarlo en la web). Con tamaños, la del producto vale para todos.
  *
  * Se aplica en la tienda en su siguiente sincronización (cada 5 minutos).
  */
@@ -26,6 +28,13 @@ const request = async (path, options = {}) => {
 
 const toRows = (sizes) =>
   (sizes || []).map((s) => ({ product_id: String(s.id), size_label: s.size_label || "", box_id: s.box_id ? String(s.box_id) : "" }));
+
+const CUSTOMIZATIONS = [
+  ["none", "Nothing: always the same"],
+  ["color", "One colour"],
+  ["describe", "Colours and a description"],
+  ["paint", "Paint it on the web"],
+];
 
 function BoxSelect({ boxes, value, onChange, disabled, id }) {
   return (
@@ -101,6 +110,11 @@ export default function ShopOptions({ item }) {
       setData(await request(`${item.id}/shop-box`, { method: "PUT", body: JSON.stringify({ box_id: boxId ? Number(boxId) : null }) }));
     });
 
+  const saveCustomization = (value) =>
+    run(async () => {
+      setData(await request(`${item.id}/shop-customization`, { method: "PUT", body: JSON.stringify({ customization: value }) }));
+    });
+
   const saveSizes = () =>
     run(async () => {
       let next = await request(`${item.id}/shop-sizes`, {
@@ -162,6 +176,26 @@ export default function ShopOptions({ item }) {
       <p className="mb-3 text-xs text-gray-500">
         Add other items as sizes of this product. The shop shows a single product with a size selector, using the name, description, photo, category and shops of this item.
       </p>
+
+      <div className="mb-4">
+        <label htmlFor={`customization-${item.id}`} className="mb-1 block text-xs text-gray-400">
+          What the customer chooses
+        </label>
+        <select
+          id={`customization-${item.id}`}
+          value={data.customization || "none"}
+          disabled={saving}
+          onChange={(e) => saveCustomization(e.target.value)}
+          className="w-full rounded-lg border border-gray-700 bg-gray-900 px-2 py-1.5 text-sm text-white"
+        >
+          {CUSTOMIZATIONS.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-gray-500">The colours offered are the ones with spools in stock.</p>
+      </div>
 
       {rows.length > 0 && (
         <ul className="mb-3 space-y-2">

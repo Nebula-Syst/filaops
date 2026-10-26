@@ -44,6 +44,7 @@ vi.mock('../../../components/LicenseSection', () => ({ default: () => null }))
 vi.mock('../../../components/settings/QualitySettingsSection', () => ({ default: () => null }))
 vi.mock('../../../components/settings/SerialNumberSettingsSection', () => ({ default: () => null }))
 vi.mock('../../../nebula/ShopSettings', () => ({ default: () => null }))
+vi.mock('../../../nebula/ShopColors', () => ({ default: () => null }))
 
 import AdminSettings from '../AdminSettings'
 
