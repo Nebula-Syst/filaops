@@ -121,4 +121,3 @@ class ShopColor(Base):
     shop_name = Column(String(100), nullable=True)
     hidden = Column(Boolean, nullable=False, default=False, server_default="false")
     updated_at = Column(DateTime(timezone=True), nullable=True)
-
