@@ -9,6 +9,9 @@
   la sincronización de las tiendas.
 - ``ShopStore`` / ``ProductShopStore``: las tiendas online y qué artículos van
   a cada una (se elige en PrintFlow y la tienda lo obedece).
+- ``ProductShopOption``: el artículo como tamaño de otro (en la tienda sale una
+  ficha con selector de tamaño) y la caja cuyo coste se suma a su precio.
+- ``ShopSettings``: lo común a las tiendas (precio del envío a domicilio).
 """
 from datetime import datetime, timezone
 
@@ -78,3 +81,27 @@ class ProductShopStore(Base):
 
     product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), primary_key=True)
     store_id = Column(String(100), ForeignKey("shop_stores.id", ondelete="CASCADE"), primary_key=True)
+
+
+class ProductShopOption(Base):
+    __tablename__ = "product_shop_options"
+    __table_args__ = (
+        CheckConstraint("group_id IS NULL OR group_id <> product_id", name="ck_product_shop_options_group"),
+    )
+
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), primary_key=True)
+    # Producto con tamaños al que pertenece (sale en la tienda como una sola ficha)
+    group_id = Column(Integer, ForeignKey("products.id", ondelete="SET NULL"), nullable=True, index=True)
+    size_label = Column(String(100), nullable=True)
+    position = Column(Integer, nullable=False, default=0)
+    # Caja (artículo de embalaje): su coste se suma al precio en la tienda
+    box_id = Column(Integer, ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
+
+
+class ShopSettings(Base):
+    __tablename__ = "shop_settings"
+    __table_args__ = (CheckConstraint("home_shipping_price >= 0", name="ck_shop_settings_shipping"),)
+
+    id = Column(Integer, primary_key=True, default=1)
+    home_shipping_price = Column(Numeric(10, 2), nullable=False, default=0)
+    updated_at = Column(DateTime(timezone=True), nullable=True)
