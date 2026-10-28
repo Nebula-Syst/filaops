@@ -34,15 +34,25 @@ const STOCKING_POLICIES = [
   { value: "stocked", label: "Stocked (Reorder Point)" },
 ];
 
+// PrintFlow: se guardan en onzas y pulgadas (FilaOps); el formulario usa kg y cm
+const OZ_PER_KG = 35.27396195;
+const IN_PER_CM = 1 / 2.54;
 const PHYSICAL_FIELDS = [
-  { name: "weight_oz", label: "Weight (oz)" },
-  { name: "length_in", label: "Length (in)" },
-  { name: "width_in", label: "Width (in)" },
-  { name: "height_in", label: "Height (in)" },
+  { name: "weight_oz", label: "Weight (kg)", factor: OZ_PER_KG, decimals: 3, step: "0.001" },
+  { name: "length_in", label: "Length (cm)", factor: IN_PER_CM, decimals: 1, step: "0.1" },
+  { name: "width_in", label: "Width (cm)", factor: IN_PER_CM, decimals: 1, step: "0.1" },
+  { name: "height_in", label: "Height (cm)", factor: IN_PER_CM, decimals: 1, step: "0.1" },
 ];
 
-const optionalNumber = (value) =>
-  value === "" || value === null || value === undefined ? null : parseFloat(value);
+const toMetric = (field, stored) =>
+  stored === "" || stored === null || stored === undefined
+    ? ""
+    : String(Number((parseFloat(stored) / field.factor).toFixed(field.decimals)));
+
+const fromMetric = (field, value) =>
+  value === "" || value === null || value === undefined
+    ? null
+    : Math.round(parseFloat(value) * field.factor * 100) / 100;
 
 const buildFormState = (item) => ({
   sku: item?.sku || "",
@@ -56,10 +66,7 @@ const buildFormState = (item) => ({
   standard_cost: item?.standard_cost || "",
   selling_price: item?.selling_price || "",
   reorder_point: item?.reorder_point || "",
-  weight_oz: item?.weight_oz || "",
-  length_in: item?.length_in || "",
-  width_in: item?.width_in || "",
-  height_in: item?.height_in || "",
+  ...Object.fromEntries(PHYSICAL_FIELDS.map((f) => [f.name, toMetric(f, item?.[f.name])])),
   image_url: item?.image_url || "",
 });
 
@@ -210,10 +217,7 @@ export default function ItemForm({
         selling_price: formData.selling_price
           ? parseFloat(formData.selling_price)
           : null,
-        weight_oz: optionalNumber(formData.weight_oz),
-        length_in: optionalNumber(formData.length_in),
-        width_in: optionalNumber(formData.width_in),
-        height_in: optionalNumber(formData.height_in),
+        ...Object.fromEntries(PHYSICAL_FIELDS.map((f) => [f.name, fromMetric(f, formData[f.name])])),
         reorder_point: formData.stocking_policy === "stocked" && formData.reorder_point
           ? parseFloat(formData.reorder_point)
           : null,
@@ -681,7 +685,7 @@ export default function ItemForm({
                     <input
                       id={`item-${field.name.replace("_", "-")}`}
                       type="number"
-                      step="0.01"
+                      step={field.step}
                       min="0"
                       value={formData[field.name]}
                       onChange={(e) =>

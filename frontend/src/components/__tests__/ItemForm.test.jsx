@@ -66,10 +66,10 @@ describe('ItemForm packaging physical metadata', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Create Item' }))
 
-    expect(await screen.findAllByText('Weight (oz) is required')).toHaveLength(2)
-    expect(screen.getAllByText('Length (in) is required')).toHaveLength(2)
-    expect(screen.getAllByText('Width (in) is required')).toHaveLength(2)
-    expect(screen.getAllByText('Height (in) is required')).toHaveLength(2)
+    expect(await screen.findAllByText('Weight (kg) is required')).toHaveLength(2)
+    expect(screen.getAllByText('Length (cm) is required')).toHaveLength(2)
+    expect(screen.getAllByText('Width (cm) is required')).toHaveLength(2)
+    expect(screen.getAllByText('Height (cm) is required')).toHaveLength(2)
     expect(globalThis.fetch).not.toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/items'),
       expect.objectContaining({ method: 'POST' })
@@ -86,17 +86,17 @@ describe('ItemForm packaging physical metadata', () => {
     fireEvent.change(screen.getByLabelText(/Item Type/), {
       target: { value: 'packaging' },
     })
-    fireEvent.change(screen.getByLabelText(/Weight \(oz\)/), {
-      target: { value: '3.2' },
+    fireEvent.change(screen.getByLabelText(/Weight \(kg\)/), {
+      target: { value: '0.09' },
     })
-    fireEvent.change(screen.getByLabelText(/Length \(in\)/), {
-      target: { value: '12' },
+    fireEvent.change(screen.getByLabelText(/Length \(cm\)/), {
+      target: { value: '30.5' },
     })
-    fireEvent.change(screen.getByLabelText(/Width \(in\)/), {
-      target: { value: '9' },
+    fireEvent.change(screen.getByLabelText(/Width \(cm\)/), {
+      target: { value: '22.9' },
     })
-    fireEvent.change(screen.getByLabelText(/Height \(in\)/), {
-      target: { value: '4' },
+    fireEvent.change(screen.getByLabelText(/Height \(cm\)/), {
+      target: { value: '10.2' },
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Item' }))
@@ -104,10 +104,21 @@ describe('ItemForm packaging physical metadata', () => {
     await waitFor(() => expect(onSuccess).toHaveBeenCalled())
     expect(postBody()).toMatchObject({
       item_type: 'packaging',
-      weight_oz: 3.2,
-      length_in: 12,
-      width_in: 9,
-      height_in: 4,
+      weight_oz: 3.17,
+      length_in: 12.01,
+      width_in: 9.02,
+      height_in: 4.02,
     })
+  })
+
+  it('shows stored ounces and inches as kg and cm', async () => {
+    renderForm({
+      editingItem: { id: 7, sku: 'BOX-1', name: 'Caja', item_type: 'packaging', is_template: true, weight_oz: '3.53', length_in: '3.15', width_in: '2.76', height_in: '2.76' },
+    })
+
+    expect(await screen.findByLabelText(/Weight \(kg\)/)).toHaveValue(0.1)
+    expect(screen.getByLabelText(/Length \(cm\)/)).toHaveValue(8)
+    expect(screen.getByLabelText(/Width \(cm\)/)).toHaveValue(7)
+    expect(screen.getByLabelText(/Height \(cm\)/)).toHaveValue(7)
   })
 })
