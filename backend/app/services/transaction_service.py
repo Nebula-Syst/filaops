@@ -754,6 +754,7 @@ class TransactionService:
         purchase_order_id: int,
         items: List[ReceiptItem],
         user_id: int = None,
+        location_id: int = None,
     ) -> Tuple[List[InventoryTransaction], GLJournalEntry]:
         """
         Receive materials from vendor.
@@ -802,6 +803,7 @@ class TransactionService:
                 lot_number=item.lot_number,
                 notes="PO receipt",
                 unit=item.unit,
+                location_id=location_id,
             )
             inv_txns.append(inv_txn)
 

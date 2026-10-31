@@ -26,7 +26,7 @@ from app.models.material_spool import MaterialSpool
 from app.models.traceability import MaterialLot
 from app.models.bom import BOM
 from app.models.manufacturing import Routing
-from app.services.uom_service import convert_quantity_safe, get_conversion_factor
+from app.services.uom_service import convert_cost_for_unit, convert_quantity_safe, get_conversion_factor
 from app.services.inventory_helpers import is_material
 from app.services.transaction_service import TransactionService, ReceiptItem
 from app.services.event_service import record_purchasing_event
@@ -1192,7 +1192,14 @@ def receive_purchase_order(
                 continue
             product_to_sync = db.query(Product).filter(Product.id == pid).first()
             if product_to_sync and product_to_sync.average_cost is not None:
-                product_to_sync.standard_cost = product_to_sync.average_cost
+                # PrintFlow: average_cost va por unidad de almacén ($/G) y
+                # standard_cost por unidad de compra ($/KG), como lo lee
+                # get_effective_cost_per_inventory_unit
+                storage_unit = (product_to_sync.unit or "EA").upper().strip()
+                purchase_unit = (product_to_sync.purchase_uom or storage_unit).upper().strip()
+                product_to_sync.standard_cost = convert_cost_for_unit(
+                    Decimal(str(product_to_sync.average_cost)), storage_unit, purchase_unit
+                )
                 logger.debug(
                     f"Auto-synced standard_cost for purchased item {product_to_sync.sku}: "
                     f"${product_to_sync.standard_cost} (= average_cost)"
@@ -1205,6 +1212,7 @@ def receive_purchase_order(
             purchase_order_id=po.id,
             items=receipt_items_for_service,
             user_id=user_id,
+            location_id=location_id,
         )
         transaction_ids = [txn.id for txn in inv_txns]
 
