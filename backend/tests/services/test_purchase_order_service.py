@@ -1682,6 +1682,63 @@ class TestReceivePurchaseOrder:
         assert float(product.standard_cost) == pytest.approx(float(product.average_cost), rel=1e-6)
         assert float(product.last_cost) == pytest.approx(0.0575, rel=1e-3)
 
+    def test_material_standard_cost_auto_synced_per_purchase_unit(
+        self, db, make_vendor, make_purchase_order, make_product
+    ):
+        """PrintFlow: filament stored in G and bought in KG keeps standard_cost
+        in $/KG (what get_effective_cost_per_inventory_unit expects), while
+        average_cost stays in $/G."""
+        vendor = make_vendor()
+        po = make_purchase_order(vendor_id=vendor.id, status="ordered")
+        product = make_product(
+            item_type="supply", unit="G", purchase_uom="KG", purchase_factor=1000,
+            standard_cost=None, average_cost=None,
+        )
+        line = _add_po_line(db, po, product, Decimal("1"), Decimal("20.00"), purchase_unit="KG")
+        db.commit()
+
+        receive_purchase_order(
+            db, po.id,
+            lines=[{"line_id": line.id, "quantity_received": Decimal("1")}],
+            user_id=1,
+            user_email="test@filaops.dev",
+        )
+
+        db.refresh(product)
+        assert float(product.average_cost) == pytest.approx(0.02, rel=1e-6)
+        assert float(product.standard_cost) == pytest.approx(20.0, rel=1e-6)
+
+    def test_receipt_posts_inventory_at_requested_location(
+        self, db, make_vendor, make_purchase_order, make_product
+    ):
+        """PrintFlow: stock and ledger rows land in the location chosen on
+        receipt, not in the default warehouse."""
+        location = InventoryLocation(name="Receiving Shelf", code="SHELF-R")
+        db.add(location)
+        vendor = make_vendor()
+        po = make_purchase_order(vendor_id=vendor.id, status="ordered")
+        product = make_product(unit="EA", purchase_uom="EA")
+        line = _add_po_line(db, po, product, Decimal("4"), Decimal("2.50"), purchase_unit="EA")
+        db.commit()
+
+        receive_purchase_order(
+            db, po.id,
+            lines=[{"line_id": line.id, "quantity_received": Decimal("4")}],
+            location_id=location.id,
+            user_id=1,
+            user_email="test@filaops.dev",
+        )
+
+        inv = db.query(Inventory).filter(Inventory.product_id == product.id).one()
+        assert inv.location_id == location.id
+        assert float(inv.on_hand_quantity) == pytest.approx(4.0)
+        txn = (
+            db.query(InventoryTransaction)
+            .filter(InventoryTransaction.product_id == product.id)
+            .one()
+        )
+        assert txn.location_id == location.id
+
     def test_manufactured_item_standard_cost_not_auto_synced(
         self, db, make_vendor, make_purchase_order, make_product
     ):
