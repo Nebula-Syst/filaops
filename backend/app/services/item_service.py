@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.logging_config import get_logger
 from app.models import Product, ItemCategory, Inventory, BOM, BOMLine
 from app.models.manufacturing import Routing
+from app.models.nebula_product import ProductShopOption  # PrintFlow
 from app.core.utils import get_or_404, check_unique_or_400
 from app.core.uom_config import DEFAULT_MATERIAL_UOM, get_default_material_sku_prefix
 
@@ -914,6 +915,31 @@ def delete_item(db: Session, item_id: int) -> dict:
     if bom_count > 0:
         raise HTTPException(
             status_code=400, detail=f"Cannot delete item used in {bom_count} active BOMs"
+        )
+
+    # PrintFlow: sus variantes y tamaños seguirían activos, y en la tienda un
+    # producto con tamaños cuya cabeza está inactiva queda oculto entero
+    variant_count = (
+        db.query(Product)
+        .filter(Product.parent_product_id == item_id, Product.active.is_(True))
+        .count()
+    )
+    if variant_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se puede eliminar: tiene {variant_count} variantes activas. Elimínalas primero.",
+        )
+
+    size_count = (
+        db.query(ProductShopOption)
+        .join(Product, Product.id == ProductShopOption.product_id)
+        .filter(ProductShopOption.group_id == item_id, Product.active.is_(True))
+        .count()
+    )
+    if size_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se puede eliminar: tiene {size_count} tamaños activos en la tienda. Elimínalos primero.",
         )
 
     item.active = False

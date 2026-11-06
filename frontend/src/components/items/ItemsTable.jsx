@@ -129,6 +129,7 @@ export default function ItemsTable({
   onEditRouting,
   onDuplicateItem,
   onManageVariants,
+  onDeleteItem, // PrintFlow
 }) {
   const formatCurrency = useFormatCurrency();
 
@@ -533,6 +534,14 @@ export default function ItemsTable({
                         Route/BOM
                       </button>
                     </>
+                  )}
+                  {item.active && (
+                    <button
+                      onClick={() => onDeleteItem?.(item)}
+                      className="text-red-400 hover:text-red-300 text-sm"
+                    >
+                      Delete
+                    </button>
                   )}
                 </div>
               </td>

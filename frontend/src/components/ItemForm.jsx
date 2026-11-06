@@ -76,6 +76,7 @@ export default function ItemForm({
   onSuccess,
   editingItem = null,
   onStockChange, // PrintFlow: refrescar la lista tras ajustar stock
+  onDelete, // PrintFlow: en el móvil las acciones de la tabla quedan fuera de la pantalla
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -793,6 +794,16 @@ export default function ItemForm({
 
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
+              {editingItem?.active && onDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(editingItem)}
+                  className="mr-auto px-4 py-2 text-red-400 hover:text-red-300"
+                  disabled={loading}
+                >
+                  Delete
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onClose}
