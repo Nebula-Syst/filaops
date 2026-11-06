@@ -26,6 +26,7 @@ from app.models.product import Product
 from app.models.item_category import ItemCategory
 from app.models.inventory import Inventory
 from app.models.bom import BOM, BOMLine
+from app.models.nebula_product import ProductShopOption
 
 
 # =============================================================================
@@ -622,6 +623,40 @@ class TestDeleteItem:
             item_service.delete_item(db, product.id)
         assert exc_info.value.status_code == 400
         assert "bom" in str(exc_info.value.detail).lower()
+
+    def test_delete_template_with_active_variant_raises_400(self, db, make_product):
+        """PrintFlow: a template can't go while it has active variants."""
+        template = make_product(is_template=True)
+        variant = make_product()
+        variant.parent_product_id = template.id
+        db.commit()
+
+        with pytest.raises(HTTPException) as exc_info:
+            item_service.delete_item(db, template.id)
+        assert exc_info.value.status_code == 400
+        assert "variantes" in exc_info.value.detail
+
+        item_service.delete_item(db, variant.id)
+        item_service.delete_item(db, template.id)
+        assert db.get(Product, template.id).active is False
+
+    def test_delete_shop_group_head_with_active_size_raises_400(self, db, make_product):
+        """PrintFlow: a shop product can't go while it has active sizes, and
+        removing a size leaves the rest of the group alone."""
+        head = make_product()
+        size = make_product()
+        db.add(ProductShopOption(product_id=size.id, group_id=head.id, size_label="10 cm"))
+        db.commit()
+
+        with pytest.raises(HTTPException) as exc_info:
+            item_service.delete_item(db, head.id)
+        assert exc_info.value.status_code == 400
+        assert "tamaños" in exc_info.value.detail
+
+        item_service.delete_item(db, size.id)
+        assert db.get(Product, head.id).active is True
+        item_service.delete_item(db, head.id)
+        assert db.get(Product, head.id).active is False
 
     def test_not_found_raises_404(self, db):
         with pytest.raises(Exception) as exc_info:

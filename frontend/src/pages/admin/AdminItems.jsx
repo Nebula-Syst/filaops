@@ -94,6 +94,7 @@ export default function AdminItems() {
   // Confirm dialog states
   const [showDeleteCategoryConfirm, setShowDeleteCategoryConfirm] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null); // PrintFlow
   const [showRecostConfirm, setShowRecostConfirm] = useState(false);
 
   const fetchCategories = useCallback(async () => {
@@ -303,6 +304,26 @@ export default function AdminItems() {
     } finally {
       setShowDeleteCategoryConfirm(false);
       setCategoryToDelete(null);
+    }
+  };
+
+  // PrintFlow: eliminar un artículo (queda inactivo, no se borra su historial)
+  const confirmDeleteItem = async () => {
+    if (!itemToDelete) return;
+    try {
+      await api.del(`/api/v1/items/${itemToDelete.id}`);
+      toast.success("Item deleted");
+      setSelectedItems((prev) => {
+        const next = new Set(prev);
+        next.delete(itemToDelete.id);
+        return next;
+      });
+      fetchItems();
+      fetchStats();
+    } catch {
+      // ApiErrorToaster ya muestra el motivo
+    } finally {
+      setItemToDelete(null);
     }
   };
 
@@ -673,6 +694,7 @@ export default function AdminItems() {
             }}
             onDuplicateItem={(item) => setDuplicatingItem(item)}
             onManageVariants={(item) => setVariantItem(item)}
+            onDeleteItem={setItemToDelete}
           />
         )}
       </div>
@@ -692,6 +714,11 @@ export default function AdminItems() {
         }}
         editingItem={editingItem}
         onStockChange={fetchItems}
+        onDelete={(item) => {
+          setShowItemModal(false);
+          setEditingItem(null);
+          setItemToDelete(item);
+        }}
       />
 
       {/* Material Form */}
@@ -785,6 +812,17 @@ export default function AdminItems() {
           setShowDeleteCategoryConfirm(false);
           setCategoryToDelete(null);
         }}
+      />
+
+      {/* PrintFlow: Delete Item Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={!!itemToDelete}
+        title="Delete Item"
+        message={`Delete "${itemToDelete?.name}" (${itemToDelete?.sku})? It will disappear from the list and from the shops. Its history is kept.`}
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        onConfirm={confirmDeleteItem}
+        onCancel={() => setItemToDelete(null)}
       />
 
       {/* Recost All Confirm Dialog */}

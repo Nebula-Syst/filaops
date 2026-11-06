@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import ItemsTable from '../ItemsTable'
 import { MockLocaleProvider } from '../../../test/mockLocaleProvider'
@@ -272,5 +272,30 @@ describe('ItemsTable — item type labels', () => {
     )
 
     expect(screen.getByText('Packaging')).toBeInTheDocument()
+  })
+})
+
+describe('ItemsTable — delete action', () => {
+  const renderTable = (props) =>
+    render(
+      <MockLocaleProvider currency="USD" locale="en-US">
+        <ItemsTable {...baseProps} {...props} />
+      </MockLocaleProvider>
+    )
+
+  it('asks to delete an active item', () => {
+    const onDeleteItem = vi.fn()
+    const active = { ...item, active: true }
+    renderTable({ items: [active], onDeleteItem })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    expect(onDeleteItem).toHaveBeenCalledWith(active)
+  })
+
+  it('hides delete on an item that is already inactive', () => {
+    renderTable({ items: [{ ...item, active: false }], onDeleteItem: vi.fn() })
+
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
   })
 })

@@ -122,3 +122,22 @@ describe('ItemForm packaging physical metadata', () => {
     expect(screen.getByLabelText(/Height \(cm\)/)).toHaveValue(7)
   })
 })
+
+describe('ItemForm delete button', () => {
+  const editingItem = { id: 7, sku: 'BOX-1', name: 'Caja', item_type: 'packaging', is_template: true, active: true }
+
+  it('offers delete when editing an active item', async () => {
+    const onDelete = vi.fn()
+    renderForm({ editingItem, onDelete })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
+
+    expect(onDelete).toHaveBeenCalledWith(editingItem)
+  })
+
+  it('does not offer delete when creating an item', () => {
+    renderForm({ onDelete: vi.fn() })
+
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
+  })
+})

@@ -584,6 +584,7 @@
   "Category": "Categoría",
   "Category created": "Categoría creada",
   "Category deleted": "Categoría eliminada",
+  "Item deleted": "Artículo eliminado",
   "Category name": "Nombre de la categoría",
   "Category updated": "Categoría actualizada",
   "Change": "Cambiar",
@@ -964,6 +965,7 @@
   "Define where and how things get made. Day-to-day orders live in Production.": "Define dónde y cómo se fabrican las cosas. Los pedidos del día a día están en Producción.",
   "Delete": "Eliminar",
   "Delete Category": "Eliminar categoría",
+  "Delete Item": "Eliminar artículo",
   "Delete Order": "Eliminar pedido",
   "Delete Permanently": "Eliminar definitivamente",
   "Delete Variant": "Eliminar variante",
@@ -4242,6 +4244,18 @@
   "Name in the shop": "Nombre en la tienda"
  },
  "patterns": [
+  [
+   "Delete \"{0}\" ({1})? It will disappear from the list and from the shops. Its history is kept.",
+   "¿Eliminar «{0}» ({1})? Desaparecerá de la lista y de las tiendas. Se conserva su historial."
+  ],
+  [
+   "Cannot delete item with {0} units on hand",
+   "No se puede eliminar: quedan {0} unidades en stock. Ajusta el stock a cero primero."
+  ],
+  [
+   "Cannot delete item used in {0} active BOMs",
+   "No se puede eliminar: tiene {0} listas de materiales activas. Desactívalas primero."
+  ],
   [
    "Cannot connect to API at {0}. If accessing remotely, ensure VITE_API_URL is set to the server's address (e.g., http://{1}:8000) and rebuild the frontend.",
    "No se puede conectar con la API en {0}. Si accedes en remoto, comprueba que VITE_API_URL apunte a la dirección del servidor (p. ej. http://{1}:8000) y vuelve a compilar el frontend."
